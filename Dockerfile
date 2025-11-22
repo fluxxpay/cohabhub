@@ -30,8 +30,8 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 # Générer le client Prisma (si nécessaire)
 RUN npx prisma generate || echo "Prisma generate skipped"
 
-# Build de l'application Next.js avec gestion d'erreurs améliorée
-RUN npm run build || (echo "Build failed, checking logs..." && cat .next/build-manifest.json 2>/dev/null || echo "No build manifest found" && exit 1)
+# Build de l'application Next.js
+RUN npm run build
 
 # Stage de production
 FROM node:18-alpine AS runner
