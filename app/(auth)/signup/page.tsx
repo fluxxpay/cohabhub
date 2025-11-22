@@ -20,7 +20,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { LoaderCircleIcon } from 'lucide-react';
-import { RecaptchaPopover } from '@/components/common/recaptcha-popover';
 import { getSignupSchema, SignupSchemaType } from '../forms/signup-schema';
 
 export default function Page() {
@@ -31,7 +30,6 @@ export default function Page() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean | null>(false);
-  const [showRecaptcha, setShowRecaptcha] = useState(false);
 
   const form = useForm<SignupSchemaType>({
     resolver: zodResolver(getSignupSchema()),
@@ -40,6 +38,7 @@ export default function Page() {
       email: '',
       password: '',
       passwordConfirmation: '',
+      referralCode: '',
       accept: false,
     },
   });
@@ -49,34 +48,36 @@ export default function Page() {
     const result = await form.trigger();
     if (!result) return;
 
-    setShowRecaptcha(true);
-  };
-
-  const handleVerifiedSubmit = async (token: string) => {
     try {
       const values = form.getValues();
 
       setIsProcessing(true);
       setError(null);
-      setShowRecaptcha(false);
 
       // Séparer le nom en first_name et last_name
       const nameParts = values.name.trim().split(' ');
       const first_name = nameParts[0] || '';
       const last_name = nameParts.slice(1).join(' ') || '';
 
+      // Préparer le body avec les champs de base
+      const bodyData: any = {
+        email: values.email,
+        password: values.password,
+        first_name: first_name,
+        last_name: last_name,
+      };
+
+      // Ajouter le code promo si fourni
+      if (values.referralCode && values.referralCode.trim() !== '') {
+        bodyData.referral_code = values.referralCode.trim();
+      }
+
       const result = await apiFetch('/api/auth/register/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-recaptcha-token': token,
         },
-        body: JSON.stringify({
-          email: values.email,
-          password: values.password,
-          first_name: first_name,
-          last_name: last_name,
-        }),
+        body: JSON.stringify(bodyData),
       });
 
       if (result.response?.ok && result.data.success) {
@@ -247,6 +248,23 @@ export default function Page() {
             )}
           />
 
+          <FormField
+            control={form.control}
+            name="referralCode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Code de parrainage (optionnel)</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="Entrez un code si vous en avez un" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <div className="flex items-center space-x-2">
             <FormField
               control={form.control}
@@ -282,23 +300,12 @@ export default function Page() {
           </div>
 
           <div className="flex flex-col gap-2.5">
-            <RecaptchaPopover
-              open={showRecaptcha}
-              onOpenChange={(open) => {
-                if (!open) {
-                  setShowRecaptcha(false);
-                }
-              }}
-              onVerify={handleVerifiedSubmit}
-              trigger={
-                <Button type="submit" disabled={isProcessing}>
-                  {isProcessing ? (
-                    <LoaderCircleIcon className="size-4 animate-spin" />
-                  ) : null}
-                  Continuer
-                </Button>
-              }
-            />
+            <Button type="submit" disabled={isProcessing}>
+              {isProcessing ? (
+                <LoaderCircleIcon className="size-4 animate-spin" />
+              ) : null}
+              Continuer
+            </Button>
           </div>
 
           <div className="text-sm text-muted-foreground text-center">

@@ -16,6 +16,7 @@ export const getSignupSchema = () => {
       passwordConfirmation: z.string().min(1, {
         message: 'La confirmation du mot de passe est requise.',
       }),
+      referralCode: z.string().optional(), // Code promo optionnel
       accept: z.boolean().refine((val) => val === true, {
         message: 'Vous devez accepter les conditions générales.',
       }),
