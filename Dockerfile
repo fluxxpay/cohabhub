@@ -28,10 +28,22 @@ ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 # Générer le client Prisma (si nécessaire)
-RUN npx prisma generate || echo "Prisma generate skipped"
+RUN echo "Generating Prisma client..." && npx prisma generate || echo "Prisma generate skipped"
 
-# Build de l'application Next.js
-RUN npm run build
+# Vérifier que les fichiers essentiels sont présents
+RUN echo "Checking essential files..." && \
+    ls -la prisma/schema.prisma && \
+    ls -la next.config.mjs && \
+    ls -la package.json
+
+# Build de l'application Next.js avec output détaillé
+RUN echo "Starting Next.js build..." && \
+    npm run build 2>&1 | head -100 || \
+    (echo "=== BUILD FAILED ===" && \
+     echo "Checking for error logs..." && \
+     ls -la .next 2>/dev/null || echo "No .next directory" && \
+     cat .next/trace 2>/dev/null || echo "No trace file" && \
+     exit 1)
 
 # Stage de production
 FROM node:18-alpine AS runner
