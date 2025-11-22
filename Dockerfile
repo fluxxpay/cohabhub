@@ -26,9 +26,17 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 # Prisma Client
 RUN npx prisma generate
 
-# Build Next.js - laisser Docker afficher la sortie directement
-RUN echo "=== Starting Next.js build ==="
-RUN npm run build
+# Build Next.js - capturer la sortie complète
+RUN echo "=== Starting Next.js build ===" && \
+    npm run build > /tmp/build-output.log 2>&1 || { \
+        echo "❌ BUILD FAILED - Showing full output:"; \
+        cat /tmp/build-output.log; \
+        echo "=== Checking for .next directory ==="; \
+        ls -la .next/ 2>/dev/null || echo "No .next directory"; \
+        exit 1; \
+    } && \
+    echo "=== Build succeeded - Showing last 100 lines ===" && \
+    tail -100 /tmp/build-output.log
 RUN echo "=== Build completed, verifying output ==="
 RUN ls -la .next/ 2>/dev/null || (echo "❌ No .next directory found!" && exit 1)
 RUN if [ ! -d ".next/standalone" ]; then \
