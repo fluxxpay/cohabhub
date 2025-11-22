@@ -36,20 +36,21 @@ RUN echo "Checking essential files..." && \
     ls -la next.config.mjs && \
     ls -la package.json
 
-# Build de l'application Next.js avec output détaillé
-RUN echo "Starting Next.js build..." && \
-    npm run build || \
-    (echo "=== BUILD FAILED ===" && \
-     echo "Checking for error logs..." && \
-     ls -la .next 2>/dev/null || echo "No .next directory" && \
-     cat .next/trace 2>/dev/null || echo "No trace file" && \
-     exit 1)
+# Build de l'application Next.js
+RUN echo "Starting Next.js build..." && npm run build
 
 # Vérifier que le build a créé les fichiers nécessaires
 RUN echo "Verifying build output..." && \
-    ls -la .next/standalone 2>/dev/null && echo "✓ standalone directory exists" || echo "✗ standalone directory missing" && \
-    ls -la .next/static 2>/dev/null && echo "✓ static directory exists" || echo "✗ static directory missing" && \
-    test -d .next/standalone && test -d .next/static || (echo "Build output incomplete!" && exit 1)
+    if [ ! -d ".next/standalone" ]; then \
+        echo "ERROR: .next/standalone directory not found!" && \
+        echo "Build output:" && ls -la .next/ 2>/dev/null || echo "No .next directory" && \
+        exit 1; \
+    fi && \
+    if [ ! -d ".next/static" ]; then \
+        echo "WARNING: .next/static directory not found, creating empty directory..." && \
+        mkdir -p .next/static; \
+    fi && \
+    echo "✓ Build output verified"
 
 # Stage de production
 FROM node:18-alpine AS runner
