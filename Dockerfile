@@ -29,11 +29,31 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 # Rendre le script exécutable
 RUN chmod +x build.sh
 
-# Prisma Client
-RUN npx prisma generate
+# Prisma Client - vérifier que ça fonctionne
+RUN echo "=== Generating Prisma Client ===" && \
+    npx prisma generate && \
+    echo "=== Prisma Client generated ===" && \
+    ls -la node_modules/.prisma/client 2>&1 || echo "⚠️ Prisma client directory not found"
 
 # Build Next.js avec le script qui capture toutes les erreurs
-RUN ./build.sh
+RUN ./build.sh || true
+
+# Afficher les erreurs capturées même si le build a échoué
+RUN if [ -f /tmp/build.log ]; then \
+        echo "=== BUILD OUTPUT (first 500 lines) ==="; \
+        head -500 /tmp/build.log 2>/dev/null || echo "No build log"; \
+        echo "=== BUILD OUTPUT (last 500 lines) ==="; \
+        tail -500 /tmp/build.log 2>/dev/null || echo "No build log"; \
+        echo "=== ERRORS FOUND ==="; \
+        grep -i "error\|failed\|fatal" /tmp/build.log 2>/dev/null | head -50 || echo "No errors found"; \
+    fi
+
+# Vérifier si le build a réussi
+RUN if [ ! -d ".next/standalone" ]; then \
+        echo "❌ BUILD FAILED: .next/standalone not found"; \
+        ls -la .next/ 2>&1 || echo "No .next directory"; \
+        exit 1; \
+    fi
 
 # ---- Runner ----
 
