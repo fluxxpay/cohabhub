@@ -1,6 +1,6 @@
 # ---- Builder ----
 
-FROM node:18-alpine AS builder
+FROM node:18-alpine AS base
 
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
@@ -32,17 +32,8 @@ RUN chmod +x build.sh
 # Prisma Client
 RUN npx prisma generate
 
-# Vérifier que Prisma a bien généré le client
-RUN ls -la node_modules/.prisma/client 2>&1 || echo "⚠️ Prisma client not found"
-
-# Afficher les variables d'environnement pour debug
-RUN echo "=== Environment check ===" && \
-    echo "NODE_ENV=$NODE_ENV" && \
-    echo "NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL" && \
-    echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL"
-
-# Build Next.js avec affichage des erreurs
-RUN npm run build 2>&1 || (echo "❌ Build failed, checking .next directory..." && ls -la .next/ 2>&1 || echo "No .next directory" && exit 1)
+# Build Next.js avec le script qui capture toutes les erreurs
+RUN ./build.sh
 
 # ---- Runner ----
 
