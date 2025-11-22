@@ -26,8 +26,23 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 # Prisma Client
 RUN npx prisma generate
 
-# Build Next.js
-RUN npm run build
+# Build Next.js - afficher toutes les sorties
+RUN echo "=== Starting Next.js build ===" && \
+    npm run build && \
+    echo "=== Build completed ===" && \
+    echo "=== Verifying build output ===" && \
+    ls -la .next/ 2>/dev/null && \
+    if [ ! -d ".next/standalone" ]; then \
+        echo "❌ ERROR: .next/standalone directory not found!" && \
+        echo "Contents of .next:" && \
+        find .next -type f -o -type d | head -20 && \
+        exit 1; \
+    fi && \
+    if [ ! -d ".next/static" ]; then \
+        echo "⚠️  WARNING: .next/static directory not found, creating empty directory..." && \
+        mkdir -p .next/static; \
+    fi && \
+    echo "✓ Build output verified successfully"
 
 # ---- Runner ----
 
