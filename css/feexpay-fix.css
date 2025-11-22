@@ -1,0 +1,114 @@
+/* 
+ * Fix pour isoler les styles FeexPay et éviter les conflits
+ * Ce fichier surcharge les styles de FeexPay pour les éléments en dehors du conteneur
+ */
+
+/* Isolation du conteneur FeexPay */
+#feexpay-payment-container {
+  isolation: isolate;
+  position: relative;
+  z-index: 1;
+  transform: translateZ(0);
+  min-height: auto !important; /* Hauteur auto au début */
+  width: 100%;
+  overflow: visible !important; /* Permettre au contenu de déborder si nécessaire */
+}
+
+/* Quand le formulaire FeexPay est affiché, augmenter la hauteur */
+/* Note: Utilisé via JavaScript pour ajuster dynamiquement */
+
+/* Permettre les styles de FeexPay dans le conteneur */
+#feexpay-payment-container * {
+  box-sizing: border-box;
+}
+
+/* S'assurer que le formulaire FeexPay peut s'afficher complètement */
+#feexpay-payment-container iframe,
+#feexpay-payment-container [class*="feexpay"],
+#feexpay-payment-container form,
+#feexpay-payment-container [id*="feexpay"],
+#feexpay-payment-container div[style*="height"],
+#feexpay-payment-container > div,
+#feexpay-payment-container > form {
+  width: 100% !important;
+  min-height: 800px !important; /* Hauteur minimale très augmentée */
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+/* Forcer les iframes à avoir une hauteur suffisante */
+#feexpay-payment-container iframe {
+  min-height: 800px !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+/* S'assurer que les boutons dans le formulaire FeexPay sont visibles */
+#feexpay-payment-container button,
+#feexpay-payment-container [type="submit"],
+#feexpay-payment-container [class*="button"],
+#feexpay-payment-container [class*="btn"],
+#feexpay-payment-container input[type="submit"] {
+  position: relative !important;
+  visibility: visible !important;
+  display: block !important;
+  margin-top: 1.5rem !important;
+  margin-bottom: 1rem !important;
+}
+
+/* S'assurer que le contenu du formulaire FeexPay n'est pas coupé */
+#feexpay-payment-container * {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+/* Forcer tous les conteneurs enfants à avoir une hauteur suffisante */
+#feexpay-payment-container > * {
+  min-height: 800px !important;
+  height: auto !important;
+}
+
+/* Cibler spécifiquement les conteneurs de formulaire FeexPay */
+#feexpay-payment-container [class*="feexpay"]:not(button),
+#feexpay-payment-container [id*="feexpay"]:not(button) {
+  min-height: 800px !important;
+  height: auto !important;
+  padding-bottom: 3rem !important;
+}
+
+/* S'assurer que le bouton de paiement dans le formulaire FeexPay est visible avec une couleur contrastée */
+#feexpay-payment-container [type="submit"],
+#feexpay-payment-container button:not([class*="retour"]):not([class*="back"]):not([class*="primary"]) {
+  background-color: #0066cc !important; /* Couleur bleue visible */
+  color: white !important;
+  border: none !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 0.375rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  margin-top: 1.5rem !important;
+  margin-bottom: 1rem !important;
+  display: block !important;
+  width: 100% !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* S'assurer que le bouton de paiement est toujours visible en bas */
+#feexpay-payment-container [type="submit"]:last-child,
+#feexpay-payment-container button:last-child:not([class*="retour"]):not([class*="back"]):not([class*="primary"]) {
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+/* 
+ * Si des conflits persistent, ajoutez des règles spécifiques ci-dessous
+ * pour surcharger les styles problématiques de FeexPay.
+ * Exemple pour protéger un élément spécifique :
+ * 
+ * .votre-classe:not(#feexpay-payment-container *) {
+ *   font-family: inherit !important;
+ * }
+ */
+
