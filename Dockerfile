@@ -38,12 +38,18 @@ RUN echo "Checking essential files..." && \
 
 # Build de l'application Next.js avec output détaillé
 RUN echo "Starting Next.js build..." && \
-    npm run build 2>&1 | head -100 || \
+    npm run build || \
     (echo "=== BUILD FAILED ===" && \
      echo "Checking for error logs..." && \
      ls -la .next 2>/dev/null || echo "No .next directory" && \
      cat .next/trace 2>/dev/null || echo "No trace file" && \
      exit 1)
+
+# Vérifier que le build a créé les fichiers nécessaires
+RUN echo "Verifying build output..." && \
+    ls -la .next/standalone 2>/dev/null && echo "✓ standalone directory exists" || echo "✗ standalone directory missing" && \
+    ls -la .next/static 2>/dev/null && echo "✓ static directory exists" || echo "✗ static directory missing" && \
+    test -d .next/standalone && test -d .next/static || (echo "Build output incomplete!" && exit 1)
 
 # Stage de production
 FROM node:18-alpine AS runner
@@ -58,8 +64,12 @@ RUN adduser --system --uid 1001 nextjs
 
 # Copier les fichiers nécessaires depuis le build standalone
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+
+# Copier le build standalone (doit exister)
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+
+# Copier les fichiers statiques (peut ne pas exister dans certains cas)
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static 2>/dev/null || echo "Static directory not found, skipping..."
 
 # Copier le schéma Prisma si nécessaire pour le runtime
 COPY --from=builder /app/prisma ./prisma
