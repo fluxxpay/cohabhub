@@ -7,11 +7,11 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Copier les fichiers de dépendances
-COPY package*.json ./
-COPY package-lock.json* ./
+COPY package.json package-lock.json* ./
 
 # Installer toutes les dépendances (y compris devDependencies pour le build)
-RUN npm ci
+# Utiliser npm install avec --legacy-peer-deps pour éviter les conflits de dépendances
+RUN npm install --legacy-peer-deps || npm install
 
 # Copier le code source (y compris Prisma schema)
 COPY . .
