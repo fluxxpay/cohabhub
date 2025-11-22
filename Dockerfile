@@ -26,23 +26,22 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 # Prisma Client
 RUN npx prisma generate
 
-# Build Next.js - afficher toutes les sorties
-RUN echo "=== Starting Next.js build ===" && \
-    npm run build && \
-    echo "=== Build completed ===" && \
-    echo "=== Verifying build output ===" && \
-    ls -la .next/ 2>/dev/null && \
-    if [ ! -d ".next/standalone" ]; then \
-        echo "❌ ERROR: .next/standalone directory not found!" && \
-        echo "Contents of .next:" && \
-        find .next -type f -o -type d | head -20 && \
+# Build Next.js - laisser Docker afficher la sortie directement
+RUN echo "=== Starting Next.js build ==="
+RUN npm run build
+RUN echo "=== Build completed, verifying output ==="
+RUN ls -la .next/ 2>/dev/null || (echo "❌ No .next directory found!" && exit 1)
+RUN if [ ! -d ".next/standalone" ]; then \
+        echo "❌ ERROR: .next/standalone directory not found!"; \
+        echo "Contents of .next:"; \
+        find .next -type f -o -type d | head -20; \
         exit 1; \
-    fi && \
-    if [ ! -d ".next/static" ]; then \
-        echo "⚠️  WARNING: .next/static directory not found, creating empty directory..." && \
+    fi
+RUN if [ ! -d ".next/static" ]; then \
+        echo "⚠️  WARNING: .next/static directory not found, creating empty directory..."; \
         mkdir -p .next/static; \
-    fi && \
-    echo "✓ Build output verified successfully"
+    fi
+RUN echo "✓ Build output verified successfully"
 
 # ---- Runner ----
 
