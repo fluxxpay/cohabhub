@@ -26,17 +26,22 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 # Prisma Client
 RUN npx prisma generate
 
-# Build Next.js - capturer la sortie complète
-RUN echo "=== Starting Next.js build ===" && \
-    npm run build > /tmp/build-output.log 2>&1 || { \
-        echo "❌ BUILD FAILED - Showing full output:"; \
-        cat /tmp/build-output.log; \
-        echo "=== Checking for .next directory ==="; \
-        ls -la .next/ 2>/dev/null || echo "No .next directory"; \
-        exit 1; \
-    } && \
-    echo "=== Build succeeded - Showing last 100 lines ===" && \
-    tail -100 /tmp/build-output.log
+# Diagnostics avant le build
+RUN echo "=== Pre-build diagnostics ===" && \
+    echo "Node version:" && node --version && \
+    echo "NPM version:" && npm --version && \
+    echo "Environment variables:" && \
+    echo "  NODE_ENV=$NODE_ENV" && \
+    echo "  NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL" && \
+    echo "  NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL" && \
+    echo "Checking files:" && \
+    ls -la package.json next.config.mjs 2>/dev/null && \
+    echo "Checking Prisma:" && \
+    ls -la prisma/schema.prisma 2>/dev/null && \
+    echo "=== Starting Next.js build ==="
+
+# Build Next.js - afficher directement sans redirection
+RUN npm run build
 RUN echo "=== Build completed, verifying output ==="
 RUN ls -la .next/ 2>/dev/null || (echo "❌ No .next directory found!" && exit 1)
 RUN if [ ! -d ".next/standalone" ]; then \
