@@ -10,8 +10,8 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 
 # Installer toutes les dépendances (y compris devDependencies pour le build)
-# Utiliser npm install avec --legacy-peer-deps pour éviter les conflits de dépendances
-RUN npm install --legacy-peer-deps || npm install
+# Utiliser --force comme recommandé dans le README pour résoudre les conflits React 19
+RUN npm install --force
 
 # Copier le code source (y compris Prisma schema)
 COPY . .
