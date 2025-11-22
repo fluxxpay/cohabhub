@@ -1,6 +1,6 @@
 # ---- Builder ----
 
-FROM node:18-alpine AS base
+FROM node:18-alpine AS builder
 
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
