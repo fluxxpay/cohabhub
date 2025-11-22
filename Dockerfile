@@ -32,8 +32,40 @@ RUN chmod +x build.sh
 # Prisma Client
 RUN npx prisma generate
 
-# Build Next.js avec le script qui capture toutes les erreurs
-RUN ./build.sh
+# Diagnostics avant le build
+RUN echo "=== Pre-build diagnostics ===" && \
+    echo "Node: $(node --version)" && \
+    echo "NPM: $(npm --version)" && \
+    echo "NODE_ENV=$NODE_ENV" && \
+    echo "NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL" && \
+    echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL" && \
+    ls -la package.json next.config.mjs tsconfig.json prisma/schema.prisma
+
+# Build Next.js - capturer la sortie et l'afficher
+RUN echo "=== Starting Next.js build ===" && \
+    (npm run build 2>&1 | tee /tmp/build-output.log) || { \
+        EXIT_CODE=$?; \
+        echo "❌ BUILD FAILED with exit code $EXIT_CODE"; \
+        echo "=== Build output (last 200 lines) ==="; \
+        tail -200 /tmp/build-output.log 2>/dev/null || echo "No build output captured"; \
+        echo "=== Searching for errors ==="; \
+        grep -i "error\|failed\|fatal" /tmp/build-output.log 2>/dev/null | head -30 || echo "No error patterns found"; \
+        exit $EXIT_CODE; \
+    }
+
+# Vérifier le résultat du build
+RUN echo "=== Verifying build output ===" && \
+    ls -la .next/ 2>&1 || (echo "❌ No .next directory!" && exit 1) && \
+    if [ ! -d ".next/standalone" ]; then \
+        echo "❌ ERROR: .next/standalone not found!"; \
+        find .next -type f -o -type d 2>&1 | head -20; \
+        exit 1; \
+    fi && \
+    if [ ! -d ".next/static" ]; then \
+        echo "⚠️  Creating .next/static..."; \
+        mkdir -p .next/static; \
+    fi && \
+    echo "✓ Build verified"
 
 # ---- Runner ----
 
