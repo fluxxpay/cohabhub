@@ -36,8 +36,16 @@ RUN echo "Checking essential files..." && \
     ls -la next.config.mjs && \
     ls -la package.json
 
-# Build de l'application Next.js
-RUN echo "Starting Next.js build..." && npm run build
+# Build de l'application Next.js avec capture complète des erreurs
+RUN echo "Starting Next.js build..." && \
+    npm run build 2>&1 | tee /tmp/build.log || \
+    (echo "=== BUILD FAILED - Full output ===" && \
+     cat /tmp/build.log && \
+     echo "=== Checking .next directory ===" && \
+     ls -la .next/ 2>/dev/null || echo "No .next directory" && \
+     echo "=== Checking for error files ===" && \
+     find .next -name "*.log" -o -name "trace" 2>/dev/null | head -5 | xargs cat 2>/dev/null || echo "No error files found" && \
+     exit 1)
 
 # Vérifier que le build a créé les fichiers nécessaires
 RUN echo "Verifying build output..." && \
