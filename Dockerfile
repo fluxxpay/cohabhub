@@ -11,6 +11,9 @@ COPY package.json package-lock.json* ./
 # Installer dépendances (React 19 -> npm install --force)
 RUN npm install --force
 
+# Copier le script de build d'abord
+COPY build.sh ./
+
 # Copier tout le code
 COPY . .
 
@@ -23,38 +26,14 @@ ARG NEXT_PUBLIC_API_URL=http://localhost:8000
 ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
+# Rendre le script exécutable
+RUN chmod +x build.sh
+
 # Prisma Client
 RUN npx prisma generate
 
-# Diagnostics avant le build
-RUN echo "=== Pre-build diagnostics ===" && \
-    echo "Node version:" && node --version && \
-    echo "NPM version:" && npm --version && \
-    echo "Environment variables:" && \
-    echo "  NODE_ENV=$NODE_ENV" && \
-    echo "  NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL" && \
-    echo "  NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL" && \
-    echo "Checking files:" && \
-    ls -la package.json next.config.mjs 2>/dev/null && \
-    echo "Checking Prisma:" && \
-    ls -la prisma/schema.prisma 2>/dev/null && \
-    echo "=== Starting Next.js build ==="
-
-# Build Next.js - afficher directement sans redirection
-RUN npm run build
-RUN echo "=== Build completed, verifying output ==="
-RUN ls -la .next/ 2>/dev/null || (echo "❌ No .next directory found!" && exit 1)
-RUN if [ ! -d ".next/standalone" ]; then \
-        echo "❌ ERROR: .next/standalone directory not found!"; \
-        echo "Contents of .next:"; \
-        find .next -type f -o -type d | head -20; \
-        exit 1; \
-    fi
-RUN if [ ! -d ".next/static" ]; then \
-        echo "⚠️  WARNING: .next/static directory not found, creating empty directory..."; \
-        mkdir -p .next/static; \
-    fi
-RUN echo "✓ Build output verified successfully"
+# Build Next.js avec le script qui capture toutes les erreurs
+RUN ./build.sh
 
 # ---- Runner ----
 
