@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # Application Next.js
+  cohab-app:
+    build: .
+    ports:
+      - "3001:3000"  # Port externe 3001, port interne 3000
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_BASE_URL=https://cohabhub.com
+      - NEXT_PUBLIC_API_URL=https://myapi.cohabhub.com
+    env_file:
+      - .env.production
+    # depends_on: redis supprimé
+    restart: unless-stopped
+    networks:
+      - cohab-network
+      - coolify
+
+  # Base de données PostgreSQL - Supprimé car vous utilisez votre DB existante
+  # postgres:
+  #   image: postgres:15-alpine
+  #   environment:
+  #     POSTGRES_DB: cohab_db
+  #     POSTGRES_USER: cohab_user
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+  #   ports:
+  #     - "5432:5432"
+  #   restart: unless-stopped
+  #   networks:
+  #     - cohab-network
+
+  # Redis supprimé - utilisez votre Redis existant ou supprimez cette section
+
+  # Nginx comme reverse proxy
+  nginx:
+    build: ./nginx
+    ports:
+      - "9080:80"   # Port externe 9080, port interne 80
+      - "9443:443"  # Port externe 9443, port interne 443
+    depends_on:
+      - cohab-app
+    restart: unless-stopped
+    networks:
+      - cohab-network
+
+  # Monitoring avec Prometheus - Supprimé car non nécessaire pour ce projet
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   ports:
+  #     - "9090:9090"
+  #   volumes:
+  #     - ./prometheus.yml:/etc/prometheus/prometheus.yml
+  #     - prometheus_data:/prometheus
+  #   command:
+  #     - '--config.file=/etc/prometheus/prometheus.yml'
+  #     - '--storage.tsdb.path=/prometheus'
+  #     - '--web.console.libraries=/etc/prometheus/console_libraries'
+  #     - '--web.console.templates=/etc/prometheus/consoles'
+  #   restart: unless-stopped
+  #   networks:
+  #     - cohab-network
+
+# volumes: redis_data supprimé
+
+networks:
+  cohab-network:
+    driver: bridge
+
