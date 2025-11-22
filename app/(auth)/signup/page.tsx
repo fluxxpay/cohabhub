@@ -63,8 +63,10 @@ export default function Page() {
       const bodyData: any = {
         email: values.email,
         password: values.password,
+        confirm_password: values.passwordConfirmation,
         first_name: first_name,
         last_name: last_name,
+        role: "user",
       };
 
       // Ajouter le code promo si fourni
