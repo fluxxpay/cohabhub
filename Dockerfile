@@ -9,7 +9,13 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 
 # Installer dépendances (React 19 -> npm install --force)
-RUN npm install --force
+RUN echo "=== Installing dependencies ===" && \
+    npm install --force --verbose 2>&1 | tee /tmp/npm-install.log || { \
+        echo "❌ npm install failed"; \
+        tail -100 /tmp/npm-install.log; \
+        exit 1; \
+    } && \
+    echo "=== Dependencies installed successfully ==="
 
 # Copier le script de build d'abord
 COPY build.sh ./
