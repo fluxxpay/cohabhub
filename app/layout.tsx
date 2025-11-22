@@ -10,18 +10,19 @@ import { I18nProvider } from '@/providers/i18n-provider';
 import { ModulesProvider } from '@/providers/modules-provider';
 import { QueryProvider } from '@/providers/query-provider';
 import { ThemeProvider } from '@/providers/theme-provider';
+import { generateMetadata as generateSEOMetadata } from '@/lib/seo';
 
 const inter = Inter({ subsets: ['latin'] });
 
 import '@/css/styles.css';
 import '@/components/keenicons/assets/styles.css';
 
-export const metadata: Metadata = {
-  title: {
-    template: '%s | Cohab',
-    default: 'Cohab', // a default is required when creating a template
-  }
-};
+export const metadata: Metadata = generateSEOMetadata({
+  title: 'Cohab - Location d\'espaces de coworking et salles de réunion',
+  description: 'Découvrez et réservez des espaces de coworking, salles de réunion et bureaux partagés. Trouvez l\'espace parfait pour votre équipe ou votre événement.',
+  keywords: ['coworking', 'location espace', 'salle de réunion', 'bureau partagé', 'espace de travail', 'bénin', 'coworking bénin'],
+  url: '/',
+});
 
 export default async function RootLayout({
   children,

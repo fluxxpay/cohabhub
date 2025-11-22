@@ -13,6 +13,8 @@ import { TestimonialsSection } from '@/components/public/testimonials-section';
 import { ContactSection } from '@/components/public/contact-section';
 import { PublicFooter } from '@/components/public/footer';
 import { ScreenLoader } from '@/components/common/screen-loader';
+import { generateOrganizationSchema, generateServiceSchema } from '@/lib/seo';
+import { StructuredData } from '@/components/seo/structured-data';
 
 export default function Home() {
   const { user, isLoading } = useAuth();
@@ -24,18 +26,26 @@ export default function Home() {
 
   // Afficher le site public pour tous (connectés ou non)
   // Les utilisateurs connectés peuvent naviguer vers le dashboard via le header
+  const organizationSchema = generateOrganizationSchema();
+  const serviceSchema = generateServiceSchema();
+
   return (
-    <main className="min-h-screen public-site-container">
-      <PublicHeader />
-      <HeroSection />
-      <SpaceSection />
-      <ServicesSection />
-      <PricingSection />
-      <EventsSection />
-      <TestimonialsSection />
-      <ContactSection />
-      <PublicFooter />
-    </main>
+    <>
+      {/* Structured Data JSON-LD */}
+      <StructuredData data={[organizationSchema, serviceSchema]} />
+      
+      <main className="min-h-screen public-site-container">
+        <PublicHeader />
+        <HeroSection />
+        <SpaceSection />
+        <ServicesSection />
+        <PricingSection />
+        <EventsSection />
+        <TestimonialsSection />
+        <ContactSection />
+        <PublicFooter />
+      </main>
+    </>
   );
 }
 
