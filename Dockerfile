@@ -63,13 +63,9 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # Copier les fichiers nécessaires depuis le build standalone
-COPY --from=builder /app/public ./public
-
-# Copier le build standalone (doit exister)
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-
-# Copier les fichiers statiques (peut ne pas exister dans certains cas)
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static 2>/dev/null || echo "Static directory not found, skipping..."
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Copier le schéma Prisma si nécessaire pour le runtime
 COPY --from=builder /app/prisma ./prisma
