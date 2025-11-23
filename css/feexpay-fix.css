@@ -3,15 +3,52 @@
  * Ce fichier surcharge les styles de FeexPay pour les éléments en dehors du conteneur
  */
 
-/* Isolation du conteneur FeexPay */
+/* Retirer overflow hidden sur DialogContent et tous ses parents quand le formulaire FeexPay est visible */
+[data-state="open"] [role="dialog"],
+[data-state="open"] [data-slot="dialog-content"],
+[data-state="open"] [data-slot="dialog-content"] > *,
+[data-state="open"] [role="dialog"] > *,
+[data-state="open"] [role="dialog"] > * > *,
+[data-state="open"] [role="dialog"] > * > * > * {
+  overflow: visible !important;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
+/* Cibler spécifiquement tous les divs dans le DialogContent et ses parents */
+[data-state="open"] [data-slot="dialog-content"] div,
+[data-state="open"] [role="dialog"] div,
+[data-state="open"] [data-slot="dialog-content"] > div,
+[data-state="open"] [role="dialog"] > div,
+[data-state="open"] [data-slot="dialog-content"] > div > div {
+  overflow: visible !important;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
+/* Cibler spécifiquement le container FeexPay et tous ses parents */
+#feexpay-payment-container,
+#feexpay-payment-container *,
+[data-state="open"] [role="dialog"] #feexpay-payment-container,
+[data-state="open"] [data-slot="dialog-content"] #feexpay-payment-container {
+  overflow: visible !important;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+  max-height: none !important;
+}
+
+/* Retirer les contraintes de hauteur sur le DialogContent quand le formulaire est visible */
+[data-state="open"] [data-slot="dialog-content"] {
+  max-height: none !important;
+  height: auto !important;
+}
+
+/* Container FeexPay - minimal, sans fond noir */
 #feexpay-payment-container {
-  isolation: isolate;
-  position: relative;
-  z-index: 1;
-  transform: translateZ(0);
-  min-height: auto !important; /* Hauteur auto au début */
   width: 100%;
-  overflow: visible !important; /* Permettre au contenu de déborder si nécessaire */
+  overflow: visible !important;
+  background: transparent !important;
+  position: relative;
 }
 
 /* Quand le formulaire FeexPay est affiché, augmenter la hauteur */
@@ -22,26 +59,22 @@
   box-sizing: border-box;
 }
 
-/* S'assurer que le formulaire FeexPay peut s'afficher complètement */
-#feexpay-payment-container iframe,
-#feexpay-payment-container [class*="feexpay"],
-#feexpay-payment-container form,
-#feexpay-payment-container [id*="feexpay"],
-#feexpay-payment-container div[style*="height"],
-#feexpay-payment-container > div,
-#feexpay-payment-container > form {
+/* S'assurer que l'iframe FeexPay est visible (pas de fond noir) */
+#feexpay-payment-container iframe {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  background: white !important;
   width: 100% !important;
-  min-height: 800px !important; /* Hauteur minimale très augmentée */
-  height: auto !important;
-  max-height: none !important;
-  overflow: visible !important;
+  border: none !important;
 }
 
-/* Forcer les iframes à avoir une hauteur suffisante */
-#feexpay-payment-container iframe {
-  min-height: 800px !important;
-  height: auto !important;
-  max-height: none !important;
+/* S'assurer que les formulaires FeexPay sont visibles */
+#feexpay-payment-container form,
+#feexpay-payment-container [class*="feexpay"]:not(button),
+#feexpay-payment-container [id*="feexpay"]:not(button) {
+  background: transparent !important;
+  overflow: visible !important;
 }
 
 /* S'assurer que les boutons dans le formulaire FeexPay sont visibles */
@@ -57,25 +90,12 @@
   margin-bottom: 1rem !important;
 }
 
-/* S'assurer que le contenu du formulaire FeexPay n'est pas coupé */
-#feexpay-payment-container * {
-  max-height: none !important;
+/* S'assurer que les divs parents ne masquent pas le formulaire avec un fond noir */
+#feexpay-payment-container > div {
+  background: transparent !important;
   overflow: visible !important;
 }
 
-/* Forcer tous les conteneurs enfants à avoir une hauteur suffisante */
-#feexpay-payment-container > * {
-  min-height: 800px !important;
-  height: auto !important;
-}
-
-/* Cibler spécifiquement les conteneurs de formulaire FeexPay */
-#feexpay-payment-container [class*="feexpay"]:not(button),
-#feexpay-payment-container [id*="feexpay"]:not(button) {
-  min-height: 800px !important;
-  height: auto !important;
-  padding-bottom: 3rem !important;
-}
 
 /* S'assurer que le bouton de paiement dans le formulaire FeexPay est visible avec une couleur contrastée */
 #feexpay-payment-container [type="submit"],
@@ -101,7 +121,6 @@
   position: relative !important;
   z-index: 10 !important;
 }
-
 /* 
  * Si des conflits persistent, ajoutez des règles spécifiques ci-dessous
  * pour surcharger les styles problématiques de FeexPay.
@@ -111,4 +130,5 @@
  *   font-family: inherit !important;
  * }
  */
+
 

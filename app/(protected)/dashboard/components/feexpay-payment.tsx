@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { ReservationService } from '@/lib/services/reservations';
 import { FeexPayProvider, FeexPayButton } from '@feexpay/react-sdk';
 import { apiFetch } from '@/lib/api';
+import '@/css/feexpay-fix.css';
 
 interface FeexPayPaymentProps {
   reservationId: string | number;
@@ -36,36 +37,10 @@ export function FeexPayPayment({
   const [paymentConfig, setPaymentConfig] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'pending' | 'completed' | 'failed'>('idle');
-  const [formVisible, setFormVisible] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [payingWithWallet, setPayingWithWallet] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
-
-  // Surveiller l'apparition du formulaire FeexPay pour ajuster la hauteur
-  useEffect(() => {
-    if (!paymentConfig || initiating) return;
-
-    const checkForm = () => {
-      const container = document.getElementById('feexpay-payment-container');
-      if (container) {
-        const hasForm = container.querySelector('iframe, form, [class*="feexpay"]:not(button)');
-        if (hasForm) {
-          setFormVisible(true);
-          // Ajuster la hauteur du conteneur
-          container.style.minHeight = '800px';
-          container.style.paddingBottom = '4rem';
-        }
-      }
-    };
-
-    // Vérifier immédiatement
-    checkForm();
-
-    // Vérifier périodiquement car le formulaire peut apparaître avec un délai
-    const interval = setInterval(checkForm, 500);
-
-    return () => clearInterval(interval);
-  }, [paymentConfig, initiating]);
+  const feexpayButtonRef = useRef<HTMLDivElement>(null);
 
   // Initier le paiement
   const initiatePayment = async () => {
@@ -153,6 +128,72 @@ export function FeexPayPayment({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
+
+  // Surveiller l'apparition du formulaire FeexPay et fermer le modal quand il commence à s'ouvrir
+  useEffect(() => {
+    if (!paymentConfig || initiating) return;
+
+    let modalClosed = false;
+    let checkCount = 0;
+    const maxChecks = 30; // Maximum 9 secondes (30 * 300ms)
+
+    // Surveiller l'apparition du formulaire FeexPay
+    const checkForFeexPayForm = () => {
+      if (modalClosed || checkCount >= maxChecks) {
+        return;
+      }
+
+      checkCount++;
+
+      // Chercher un iframe FeexPay dans le container
+      const container = document.getElementById('feexpay-payment-container');
+      if (!container) return;
+
+      const feexpayIframe = container.querySelector('iframe');
+      const feexpayForm = container.querySelector('form');
+      const feexpayContent = container.querySelector('[class*="feexpay"]:not(button)');
+      
+      // Vérifier que l'élément est vraiment visible et chargé
+      const isVisible = (element: Element | null) => {
+        if (!element) return false;
+        const htmlElement = element as HTMLElement;
+        const style = window.getComputedStyle(htmlElement);
+        return style.display !== 'none' && 
+               style.visibility !== 'hidden' && 
+               style.opacity !== '0' &&
+               htmlElement.offsetWidth > 50 && // Au moins 50px de largeur
+               htmlElement.offsetHeight > 50;   // Au moins 50px de hauteur
+      };
+
+      // Si un formulaire FeexPay est visible et chargé, fermer le modal
+      if ((feexpayIframe && isVisible(feexpayIframe)) || 
+          (feexpayForm && isVisible(feexpayForm)) ||
+          (feexpayContent && isVisible(feexpayContent))) {
+        // Attendre un peu pour s'assurer que le formulaire est bien chargé
+        setTimeout(() => {
+          if (!modalClosed) {
+            onClose();
+            modalClosed = true;
+          }
+        }, 500); // Délai de 500ms pour laisser le formulaire s'afficher
+      }
+    };
+
+    // Commencer à vérifier après un court délai pour laisser le bouton apparaître
+    const initialDelay = setTimeout(() => {
+      // Vérifier périodiquement l'apparition du formulaire
+      const interval = setInterval(checkForFeexPayForm, 300);
+
+      // Nettoyer après le maximum de vérifications
+      setTimeout(() => {
+        clearInterval(interval);
+      }, maxChecks * 300);
+    }, 500);
+
+    return () => {
+      clearTimeout(initialDelay);
+    };
+  }, [paymentConfig, initiating, onClose]);
 
   // Payer avec le wallet
   const handlePayWithWallet = async () => {
@@ -250,15 +291,9 @@ export function FeexPayPayment({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent 
-        className="sm:max-w-2xl max-h-[95vh] overflow-y-auto" 
-        style={{ 
-          maxHeight: '95vh',
-          height: formVisible ? '95vh' : 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
+        <DialogContent 
+          className="sm:max-w-2xl"
+        >
         <DialogHeader>
           <DialogTitle>Paiement FeexPay</DialogTitle>
           <DialogDescription>
@@ -266,7 +301,7 @@ export function FeexPayPayment({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 flex-1 overflow-y-auto min-h-0">
+        <div className="space-y-4" style={{ overflow: 'visible' }}>
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -291,7 +326,7 @@ export function FeexPayPayment({
           )}
 
           {paymentConfig && !initiating && (
-            <div className="space-y-4">
+            <div className="space-y-4" style={{ overflow: 'visible' }}>
               {/* Option de paiement avec wallet */}
               {walletBalance !== null && (
                 <div className="space-y-3">
@@ -357,19 +392,11 @@ export function FeexPayPayment({
               <p className="text-sm text-muted-foreground">
                 Utilisez le bouton ci-dessous pour effectuer le paiement avec FeexPay :
               </p>
-              {/* Conteneur isolé pour FeexPay - hauteur adaptative seulement quand le formulaire est affiché */}
+              {/* Conteneur minimal pour FeexPay */}
               <div 
                 id="feexpay-payment-container" 
                 className="feexpay-container"
-                style={{
-                  isolation: 'isolate',
-                  position: 'relative',
-                  zIndex: 1,
-                  minHeight: formVisible ? '800px' : 'auto',
-                  width: '100%',
-                  overflow: formVisible ? 'auto' : 'visible',
-                  maxHeight: formVisible ? 'none' : 'auto',
-                }}
+                ref={feexpayButtonRef}
               >
                 <FeexPayProvider>
                   <FeexPayButton
