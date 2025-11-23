@@ -43,18 +43,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority,
   }));
 
-  // Récupérer les espaces dynamiques depuis l'API
+  // Récupérer les espaces dynamiques depuis l'API publique (sans authentification)
   let dynamicRoutes: MetadataRoute.Sitemap = [];
   
   try {
-    const response = await fetch(`${apiUrl}/api/spaces/`, {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://cohabhub.com';
+    // Essayer d'abord la route API Next.js (proxy), puis Django direct
+    let response = await fetch(`${baseUrl}/api/spaces/public`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      // Cache pour éviter de surcharger l'API
-      next: { revalidate: 3600 }, // Revalider toutes les heures
+      next: { revalidate: 3600 },
     });
+    
+    // Si la route Next.js n'existe pas, essayer directement Django
+    if (!response.ok && response.status === 404) {
+      response = await fetch(`${apiUrl}/api/spaces/public/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        next: { revalidate: 3600 },
+      });
+    }
 
     if (response.ok) {
       const data = await response.json();
@@ -63,13 +75,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       dynamicRoutes = spaces
         .filter((space: any) => space.is_active !== false)
         .map((space: any) => ({
-          url: `${baseUrl}/space/${space.id}`,
+          url: `${baseUrl}/espaces/${space.id}`,
           lastModified: space.updated_at 
             ? new Date(space.updated_at) 
             : new Date(),
           changeFrequency: 'weekly' as const,
           priority: 0.7,
         }));
+      
+      // Ajouter la page de listing des espaces
+      staticRoutes.push({
+        url: `${baseUrl}/espaces`,
+        lastModified: new Date(),
+        changeFrequency: 'daily' as const,
+        priority: 0.9,
+      });
     }
   } catch (error) {
     console.error('Erreur lors de la récupération des espaces pour le sitemap:', error);

@@ -302,12 +302,12 @@ export default function Page() {
           </div>
 
           <div className="flex flex-col gap-2.5">
-            <Button type="submit" disabled={isProcessing}>
-              {isProcessing ? (
-                <LoaderCircleIcon className="size-4 animate-spin" />
-              ) : null}
-              Continuer
-            </Button>
+                <Button type="submit" disabled={isProcessing}>
+                  {isProcessing ? (
+                    <LoaderCircleIcon className="size-4 animate-spin" />
+                  ) : null}
+                  Continuer
+                </Button>
           </div>
 
           <div className="text-sm text-muted-foreground text-center">

@@ -160,14 +160,7 @@ export const SpaceSection: React.FC = () => {
               whileHover={{ y: -5, scale: 1.01 }}
             >
               {/* Image */}
-              <div className="block cursor-pointer" onClick={() => {
-                if (space.type === 'evenement') {
-                  window.location.href = '/events';
-                } else {
-                  // Rediriger vers booking avec l'ID de l'espace
-                  window.location.href = `/booking?space=${space.id}`;
-                }
-              }}>
+              <Link href={space.type === 'evenement' ? '/events' : `/espaces/${space.id}`}>
                 <div className="relative h-48 overflow-hidden cursor-pointer">
                   <img 
                     src={space.images[0]} 
@@ -184,22 +177,17 @@ export const SpaceSection: React.FC = () => {
                     <span className="text-sm font-medium ml-1">{space.rating}</span>
                   </div>
                 </div>
-              </div>
+              </Link>
 
               {/* Contenu */}
               <div className="p-6 flex flex-col flex-grow">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h3 className="text-xl font-display text-primary-900 mb-2 group-hover:text-accent-600 transition-colors duration-300 cursor-pointer hover:text-accent-600"
-                        onClick={() => {
-                          if (space.type === 'evenement') {
-                            window.location.href = '/events';
-                          } else {
-                            window.location.href = `/booking?space=${space.id}`;
-                          }
-                        }}>
-                      {space.name}
-                    </h3>
+                    <Link href={space.type === 'evenement' ? '/events' : `/espaces/${space.id}`}>
+                      <h3 className="text-xl font-display text-primary-900 mb-2 group-hover:text-accent-600 transition-colors duration-300 cursor-pointer hover:text-accent-600">
+                        {space.name}
+                      </h3>
+                    </Link>
                     <p className="text-primary-600 text-sm mb-3 font-body">{space.description}</p>
                   </div>
                   <div className="p-2 bg-accent-50 rounded-lg group-hover:bg-accent-100 transition-colors duration-300">
@@ -222,25 +210,17 @@ export const SpaceSection: React.FC = () => {
                 {/* Prix */}
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <span className="text-lg font-semibold text-accent-600">
+                    <span className="text-base font-semibold text-accent-600">
                       {getPriceDisplay(space)}
                     </span>
                   </div>
-                  <button 
-                    onClick={() => {
-                      // Si l'utilisateur n'est pas connecté, rediriger vers signup
-                      const isAuthenticated = typeof window !== 'undefined' && localStorage.getItem('auth-token');
-                      if (!isAuthenticated) {
-                        window.location.href = `/signup?redirect=${encodeURIComponent(`/booking?space=${space.id}`)}`;
-                      } else {
-                        window.location.href = `/booking?space=${space.id}`;
-                      }
-                    }}
+                  <Link 
+                    href={space.type === 'evenement' ? '/events' : `/espaces/${space.id}`}
                     className="px-6 py-2 bg-primary-900 text-white rounded-full text-sm font-light hover:bg-primary-800 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2 group-hover:scale-105"
                   >
-                    {space.type === 'evenement' ? 'Découvrir' : 'Réserver'}
+                    {space.type === 'evenement' ? 'Découvrir' : 'Explorer'}
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
-                  </button>
+                  </Link>
                 </div>
 
                 {/* Équipements & Services */}
@@ -267,21 +247,13 @@ export const SpaceSection: React.FC = () => {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="text-center mt-16"
         >
-          <button 
-            onClick={() => {
-              // Rediriger vers booking pour voir tous les espaces
-              const isAuthenticated = typeof window !== 'undefined' && localStorage.getItem('auth-token');
-              if (!isAuthenticated) {
-                window.location.href = `/signup?redirect=${encodeURIComponent('/booking')}`;
-              } else {
-                window.location.href = '/booking';
-              }
-            }}
-            className="px-8 py-3 bg-primary-900 text-white rounded-full text-sm font-light flex items-center space-x-2 transition-all hover:bg-primary-800 shadow-lg hover:shadow-xl mx-auto hover:scale-105"
+          <Link 
+            href="/espaces"
+            className="inline-flex items-center space-x-2 px-8 py-3 bg-primary-900 text-white rounded-full text-sm font-light transition-all hover:bg-primary-800 shadow-lg hover:shadow-xl hover:scale-105"
           >
             <span>Explorer tous nos espaces</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
-          </button>
+          </Link>
         </motion.div>
       </div>
     </section>

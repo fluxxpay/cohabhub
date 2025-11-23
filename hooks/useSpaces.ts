@@ -61,11 +61,56 @@ export const useSpaces = () => {
   useEffect(() => {
     if (!mounted) return;
     
-    // Simuler un appel API
+    // Récupérer les espaces depuis l'API réelle
     const fetchSpaces = async () => {
       setLoading(true);
       
-      // Données simulées selon le cahier des charges
+      try {
+        // Utiliser SpaceService pour récupérer les espaces réels
+        const { SpaceService } = await import('@/lib/services/spaces');
+        const apiSpaces = await SpaceService.getSpaces();
+        
+        // Convertir les espaces de l'API au format attendu par le composant
+        const convertedSpaces: Space[] = apiSpaces.map((apiSpace: any) => ({
+          id: apiSpace.id.toString(), // Utiliser l'ID numérique comme string pour la compatibilité
+          name: apiSpace.name,
+          type: (apiSpace.type || 'general') as Space['type'],
+          category: apiSpace.category,
+          description: apiSpace.description || '',
+          longDescription: apiSpace.description || '',
+          price: {
+            hourly: apiSpace.price_hour || 0,
+            halfDay: apiSpace.price_half_day || 0,
+            fullDay: apiSpace.price_full_day || 0,
+            weekly: 0, // À calculer si nécessaire
+          },
+          pricePeriod: apiSpace.price_hour ? "/h" : apiSpace.price_full_day ? "/jour" : "",
+          size: "", // Non disponible dans l'API
+          capacity: apiSpace.capacity?.toString() || "0",
+          location: apiSpace.location || '',
+          features: [], // À mapper depuis options si nécessaire
+          amenities: (apiSpace.options || []).map((opt: any) => ({
+            icon: opt.icon || "Gear",
+            name: opt.name || opt,
+            description: "",
+          })),
+          images: apiSpace.images || [],
+          availability: apiSpace.is_active ? "Disponible immédiatement" : "Non disponible",
+          rating: apiSpace.rating || 4.5,
+          reviews: 0,
+          transport: [],
+          nearby: [],
+        }));
+        
+        setSpaces(convertedSpaces);
+        setLoading(false);
+        return; // Sortir si succès
+      } catch (error) {
+        console.error('Erreur lors du chargement des espaces depuis l\'API:', error);
+        // Fallback sur les données mockées en cas d'erreur
+      }
+      
+      // Données mockées en fallback
       const mockSpaces: Space[] = [
         {
           id: "bureau-privatif-1",

@@ -1,4 +1,5 @@
 import { apiFetch } from '../api';
+import { getApiUrl } from '../config';
 
 export interface SpaceOption {
   id: number;
@@ -39,11 +40,36 @@ export interface SpaceListResponse {
  */
 export class SpaceService {
   /**
-   * Récupère tous les espaces disponibles
+   * Récupère tous les espaces disponibles (version publique - sans authentification)
+   * Utilise l'endpoint public pour le SEO et les visiteurs non connectés
    */
-  static async getSpaces(): Promise<Space[]> {
+  static async getSpaces(usePublicEndpoint: boolean = true): Promise<Space[]> {
     try {
-      const result = await apiFetch('/api/spaces/', {
+      const apiUrl = getApiUrl();
+      const endpoint = usePublicEndpoint ? '/api/spaces/public/' : '/api/spaces/';
+      
+      // Pour les endpoints publics, utiliser fetch directement (pas besoin d'authentification)
+      if (usePublicEndpoint) {
+        const response = await fetch(`${apiUrl}${endpoint}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Erreur lors du chargement des espaces');
+        }
+
+        const data = await response.json();
+        const spacesData = data.data || data.results || data;
+        
+        // Parser et normaliser les espaces
+        return this.normalizeSpaces(Array.isArray(spacesData) ? spacesData : [spacesData]);
+      }
+      
+      // Pour les endpoints authentifiés, utiliser apiFetch
+      const result = await apiFetch(endpoint, {
         method: 'GET',
       });
 
@@ -64,7 +90,18 @@ export class SpaceService {
       }
 
       // Parser et normaliser les espaces
-      return spaces.map((space: any) => ({
+      return this.normalizeSpaces(spaces);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des espaces:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Normalise les données d'espaces depuis l'API vers le format attendu
+   */
+  private static normalizeSpaces(spaces: any[]): Space[] {
+    return spaces.map((space: any) => ({
         id: space.id,
         name: space.name,
         description: space.description || '',
@@ -86,23 +123,47 @@ export class SpaceService {
             category: opt.category || '',
             option_type: opt.option_type || 'non_variable',
           })) || [],
-        images: space.photos?.map((p: any) => 
-          p.image?.startsWith('http') ? p.image : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/media/${p.image}`
-        ) || [],
+        images: space.photos?.map((p: any) => {
+          // Gérer les différents formats de photos
+          const imageUrl = p.image_url || p.image;
+          if (!imageUrl) return null;
+          if (imageUrl.startsWith('http')) return imageUrl;
+          const apiUrl = getApiUrl();
+          return `${apiUrl}/media/${imageUrl}`;
+        }).filter(Boolean) || [],
         rating: space.rating || 4.5,
       }));
-    } catch (error) {
-      console.error('Erreur lors de la récupération des espaces:', error);
-      throw error;
-    }
   }
 
   /**
-   * Récupère un espace par son ID
+   * Récupère un espace par son ID (version publique - sans authentification)
+   * Utilise l'endpoint public pour le SEO et les visiteurs non connectés
    */
-  static async getSpaceById(id: number): Promise<Space> {
+  static async getSpaceById(id: number, usePublicEndpoint: boolean = true): Promise<Space> {
     try {
-      const result = await apiFetch(`/api/spaces/${id}/`, {
+      const apiUrl = getApiUrl();
+      const endpoint = usePublicEndpoint ? `/api/spaces/public/${id}/` : `/api/spaces/${id}/`;
+      
+      // Pour les endpoints publics, utiliser fetch directement (pas besoin d'authentification)
+      if (usePublicEndpoint) {
+        const response = await fetch(`${apiUrl}${endpoint}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Espace non trouvé');
+        }
+
+        const data = await response.json();
+        const space = data.data || data;
+        return this.normalizeSpace(space);
+      }
+      
+      // Pour les endpoints authentifiés, utiliser apiFetch
+      const result = await apiFetch(endpoint, {
         method: 'GET',
       });
 
@@ -111,7 +172,18 @@ export class SpaceService {
       }
 
       const space = result.data as any;
-      return {
+      return this.normalizeSpace(space);
+    } catch (error) {
+      console.error('Erreur lors de la récupération de l\'espace:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Normalise les données d'un espace depuis l'API vers le format attendu
+   */
+  private static normalizeSpace(space: any): Space {
+    return {
         id: space.id,
         name: space.name,
         description: space.description || '',
@@ -133,15 +205,16 @@ export class SpaceService {
             category: opt.category || '',
             option_type: opt.option_type || 'non_variable',
           })) || [],
-        images: space.photos?.map((p: any) => 
-          p.image?.startsWith('http') ? p.image : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/media/${p.image}`
-        ) || [],
+        images: space.photos?.map((p: any) => {
+          // Gérer les différents formats de photos
+          const imageUrl = p.image_url || p.image;
+          if (!imageUrl) return null;
+          if (imageUrl.startsWith('http')) return imageUrl;
+          const apiUrl = getApiUrl();
+          return `${apiUrl}/media/${imageUrl}`;
+        }).filter(Boolean) || [],
         rating: space.rating || 4.5,
       };
-    } catch (error) {
-      console.error('Erreur lors de la récupération de l\'espace:', error);
-      throw error;
-    }
   }
 
   /**
