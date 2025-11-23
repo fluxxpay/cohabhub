@@ -131,6 +131,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const responseData = await response.json();
     // Gérer le format de réponse de l'endpoint public (peut avoir une clé 'data')
     const spaceData = responseData.data || responseData;
+    const apiUrl = getApiUrl();
     const space = {
       id: spaceData.id,
       name: spaceData.name,
@@ -220,6 +221,7 @@ export default async function SpaceDetailPage({ params }: PageProps) {
     const responseData = await response.json();
     // Gérer le format de réponse de l'endpoint public (peut avoir une clé 'data')
     const spaceData = responseData.data || responseData;
+    const apiUrl = getApiUrl();
     const space = {
       id: spaceData.id,
       name: spaceData.name,
@@ -232,7 +234,7 @@ export default async function SpaceDetailPage({ params }: PageProps) {
       price_half_day: parseFloat(spaceData.price_half_day || 0),
       price_full_day: parseFloat(spaceData.price_full_day || 0),
       is_active: spaceData.is_active !== false,
-      status: spaceData.is_active ? 'available' : 'maintenance',
+      status: (spaceData.is_active ? 'available' : 'maintenance') as 'available' | 'maintenance' | 'occupied' | undefined,
       options: spaceData.options?.map((opt: any) => ({
         id: opt.id || opt,
         name: opt.name || '',

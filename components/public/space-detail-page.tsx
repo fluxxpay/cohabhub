@@ -123,14 +123,17 @@ export function SpaceDetailPage({ space }: SpaceDetailPageProps) {
               <div className="bg-white rounded-2xl p-6 shadow-lg">
                 <h2 className="text-2xl font-bold text-primary-900 mb-4">Équipements</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {space.options.map((option, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
-                        <WifiHigh className="w-4 h-4 text-primary-600" />
+                  {space.options.map((option, index) => {
+                    const optionName = typeof option === 'string' ? option : (option.name || '');
+                    return (
+                      <div key={index} className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
+                          <WifiHigh className="w-4 h-4 text-primary-600" />
+                        </div>
+                        <span className="text-primary-700">{optionName}</span>
                       </div>
-                      <span className="text-primary-700">{option.name || option}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
