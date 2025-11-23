@@ -254,8 +254,9 @@ export function FeexPayPayment({
         className="sm:max-w-2xl max-h-[95vh] overflow-y-auto" 
         style={{ 
           maxHeight: '95vh',
-          // Réduire la hauteur initiale du modal
-          height: paymentConfig && !initiating ? 'auto' : 'auto',
+          height: formVisible ? '95vh' : 'auto',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         <DialogHeader>
@@ -265,7 +266,7 @@ export function FeexPayPayment({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 flex-1 overflow-y-auto min-h-0">
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -364,9 +365,10 @@ export function FeexPayPayment({
                   isolation: 'isolate',
                   position: 'relative',
                   zIndex: 1,
-                  minHeight: 'auto', // Hauteur auto au début
+                  minHeight: formVisible ? '800px' : 'auto',
                   width: '100%',
-                  overflow: 'visible',
+                  overflow: formVisible ? 'auto' : 'visible',
+                  maxHeight: formVisible ? 'none' : 'auto',
                 }}
               >
                 <FeexPayProvider>
