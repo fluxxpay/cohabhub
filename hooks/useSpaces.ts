@@ -70,11 +70,42 @@ export const useSpaces = () => {
         const { SpaceService } = await import('@/lib/services/spaces');
         const apiSpaces = await SpaceService.getSpaces();
         
+        // Fonction pour mapper les types de l'API vers les types attendus
+        const mapSpaceType = (apiType: string | undefined, category: string | undefined): Space['type'] => {
+          const normalizedType = (apiType || '').toLowerCase().trim();
+          const normalizedCategory = (category || '').toLowerCase().trim();
+          
+          // Mapping des types possibles de l'API
+          if (normalizedType.includes('cabine') || normalizedType.includes('individuel') || normalizedType === 'bureau-privatif' ||
+              normalizedCategory.includes('bureau privé') || normalizedCategory.includes('bureau privatif') || normalizedCategory.includes('cabine')) {
+            return 'cabine-individuelle';
+          }
+          if (normalizedType.includes('open') || normalizedType.includes('desk') || normalizedType.includes('partagé') || normalizedType.includes('collaboratif') ||
+              normalizedCategory.includes('open') || normalizedCategory.includes('partagé') || normalizedCategory.includes('collaboratif')) {
+            return 'open-desk';
+          }
+          if (normalizedType.includes('premium') || normalizedType.includes('king') ||
+              normalizedCategory.includes('premium') || normalizedCategory.includes('king')) {
+            return 'premium';
+          }
+          if (normalizedType.includes('evenement') || normalizedType.includes('salle') || normalizedType.includes('réunion') ||
+              normalizedCategory.includes('événement') || normalizedCategory.includes('salle') || normalizedCategory.includes('réunion')) {
+            return 'evenement';
+          }
+          if (normalizedType.includes('hebergement') || normalizedType.includes('appartement') || normalizedType.includes('logement') ||
+              normalizedCategory.includes('hébergement') || normalizedCategory.includes('appartement') || normalizedCategory.includes('logement')) {
+            return 'hebergement';
+          }
+          
+          // Par défaut
+          return 'cabine-individuelle';
+        };
+        
         // Convertir les espaces de l'API au format attendu par le composant
         const convertedSpaces: Space[] = apiSpaces.map((apiSpace: any) => ({
           id: apiSpace.id.toString(), // Utiliser l'ID numérique comme string pour la compatibilité
           name: apiSpace.name,
-          type: (apiSpace.type || 'general') as Space['type'],
+          type: mapSpaceType(apiSpace.type, apiSpace.category),
           category: apiSpace.category,
           description: apiSpace.description || '',
           longDescription: apiSpace.description || '',
