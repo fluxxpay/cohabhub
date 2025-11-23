@@ -88,6 +88,13 @@
   display: block !important;
   margin-top: 1.5rem !important;
   margin-bottom: 1rem !important;
+  background-color: #0066cc !important;
+  color: white !important;
+  border: none !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 0.375rem !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
 }
 
 /* S'assurer que les divs parents ne masquent pas le formulaire avec un fond noir */
@@ -99,7 +106,13 @@
 
 /* S'assurer que le bouton de paiement dans le formulaire FeexPay est visible avec une couleur contrastée */
 #feexpay-payment-container [type="submit"],
-#feexpay-payment-container button:not([class*="retour"]):not([class*="back"]):not([class*="primary"]) {
+#feexpay-payment-container button:not([class*="retour"]):not([class*="back"]):not([class*="primary"]),
+#feexpay-payment-container button[type="button"],
+#feexpay-payment-container button[type="submit"],
+#feexpay-payment-container form button,
+#feexpay-payment-container form [type="submit"],
+#feexpay-payment-container [class*="feexpay"] button,
+#feexpay-payment-container [id*="feexpay"] button {
   background-color: #0066cc !important; /* Couleur bleue visible */
   color: white !important;
   border: none !important;
@@ -113,6 +126,8 @@
   width: 100% !important;
   visibility: visible !important;
   opacity: 1 !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
 }
 
 /* S'assurer que le bouton de paiement est toujours visible en bas */
@@ -120,6 +135,34 @@
 #feexpay-payment-container button:last-child:not([class*="retour"]):not([class*="back"]):not([class*="primary"]) {
   position: relative !important;
   z-index: 10 !important;
+  background-color: #0066cc !important;
+  color: white !important;
+}
+
+/* Cibler tous les boutons de paiement possibles, y compris ceux créés dynamiquement */
+#feexpay-payment-container button[style*="white"],
+#feexpay-payment-container button[style*="background"],
+#feexpay-payment-container button:not([style*="background-color"]),
+#feexpay-payment-container button[style*="color: white"],
+#feexpay-payment-container button[style*="color:white"] {
+  background-color: #0066cc !important;
+  color: white !important;
+  border: 2px solid #0052a3 !important;
+}
+
+/* Cibler les boutons dans les formulaires FeexPay */
+#feexpay-payment-container form button,
+#feexpay-payment-container form input[type="submit"],
+#feexpay-payment-container form input[type="button"] {
+  background-color: #0066cc !important;
+  color: white !important;
+  border: none !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 0.375rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 /* 
  * Si des conflits persistent, ajoutez des règles spécifiques ci-dessous
