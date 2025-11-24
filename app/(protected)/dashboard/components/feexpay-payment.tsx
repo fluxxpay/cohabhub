@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ export function FeexPayPayment({
   onClose,
   onPaymentSuccess,
 }: FeexPayPaymentProps) {
+  const router = useRouter();
   const [initiating, setInitiating] = useState(false);
   const [paymentConfig, setPaymentConfig] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -255,37 +257,154 @@ export function FeexPayPayment({
 
   // Callback après paiement
   const handlePaymentCallback = async (response: any) => {
-    console.log('Réponse FeexPay:', response);
+    console.log('Réponse FeexPay callback:', response);
     
-    if (response.status === 'success' || response.status === 'completed') {
+    // Normaliser le statut (FeexPay peut retourner "SUCCESSFUL" en majuscules)
+    const normalizedStatus = (response.status || '').toLowerCase();
+    const isSuccess = normalizedStatus === 'success' || 
+                      normalizedStatus === 'completed' || 
+                      normalizedStatus === 'successful' ||
+                      normalizedStatus === 'paid';
+    
+    if (isSuccess) {
       setPaymentStatus('completed');
       toast.success('Paiement effectué avec succès !');
       
-      // Mettre à jour le statut de la réservation
-      try {
-        await ReservationService.updateReservationStatus(reservationId, 'paid');
-        toast.success('Réservation confirmée');
-        
-        // Appeler le callback de succès
-        if (onPaymentSuccess) {
-          onPaymentSuccess();
+      // Récupérer l'ID du paiement depuis la réponse
+      const paymentId = response.payment_id || response.id || response.payment?.id;
+      console.log('Payment ID:', paymentId);
+      
+      // Attendre que le webhook backend traite le paiement et mette à jour la réservation
+      // Le backend met automatiquement à jour le statut via le webhook FeexPay
+      let attempts = 0;
+      const maxAttempts = 10; // 10 tentatives sur 5 secondes
+      
+      const checkReservationStatus = async (): Promise<boolean> => {
+        try {
+          // Vérifier le statut de la réservation
+          const reservationResponse = await apiFetch(`/api/reservations/${reservationId}/`, {
+            method: 'GET',
+          });
+          
+          if (reservationResponse.response?.ok && reservationResponse.data) {
+            const reservation = reservationResponse.data;
+            console.log('Statut actuel de la réservation:', reservation.status);
+            
+            if (reservation.status === 'paid') {
+              console.log('✅ Réservation confirmée par le backend');
+              return true;
+            }
+          }
+          
+          // Si le paiement a un ID, vérifier aussi le statut du paiement
+          if (paymentId) {
+            try {
+              const paymentStatusResponse = await apiFetch(`/api/feexpay/payment/${paymentId}/status/`, {
+                method: 'GET',
+              });
+              
+              if (paymentStatusResponse.response?.ok && paymentStatusResponse.data) {
+                const paymentStatus = paymentStatusResponse.data.payment?.status || paymentStatusResponse.data.status;
+                console.log('Statut du paiement:', paymentStatus);
+                
+                if (paymentStatus === 'completed' || paymentStatus === 'success' || paymentStatus === 'paid') {
+                  // Le paiement est confirmé, mais la réservation n'est pas encore mise à jour
+                  // Attendre un peu plus
+                  return false;
+                }
+              }
+            } catch (err) {
+              console.warn('Erreur lors de la vérification du statut du paiement:', err);
+            }
+          }
+          
+          return false;
+        } catch (err) {
+          console.error('Erreur lors de la vérification du statut:', err);
+          return false;
         }
+      };
+      
+      // Polling pour vérifier que le backend a mis à jour le statut
+      const pollStatus = async () => {
+        attempts++;
+        const isUpdated = await checkReservationStatus();
         
-        // Fermer le modal après un délai
-        setTimeout(() => {
+        if (isUpdated || attempts >= maxAttempts) {
+          // Appeler le callback de succès
+          if (onPaymentSuccess) {
+            onPaymentSuccess();
+          }
+          
+          // Fermer le modal immédiatement pour éviter qu'il se rouvre
           onClose();
-        }, 2000);
-      } catch (err: any) {
-        console.error('Erreur lors de la mise à jour du statut:', err);
-        toast.error('Paiement réussi mais erreur lors de la mise à jour de la réservation');
+          
+          // Rediriger vers la page de listing des réservations
+          setTimeout(() => {
+            router.push('/dashboard?tab=reservations');
+            router.refresh();
+          }, 300);
+        } else {
+          // Réessayer après 500ms
+          setTimeout(pollStatus, 500);
+        }
+      };
+      
+      // En local, le webhook FeexPay ne peut pas atteindre localhost
+      // Donc on met à jour manuellement le statut et on redirige directement
+      const isLocal = typeof window !== 'undefined' && 
+                     (window.location.hostname === 'localhost' || 
+                      window.location.hostname === '127.0.0.1');
+      
+      if (isLocal) {
+        // En local : mettre à jour manuellement le statut
+        try {
+          console.log('Mode local détecté - Mise à jour manuelle du statut');
+          await ReservationService.updateReservationStatus(reservationId, 'paid');
+          console.log('✅ Statut mis à jour manuellement en local');
+          
+          // Appeler le callback de succès
+          if (onPaymentSuccess) {
+            onPaymentSuccess();
+          }
+          
+          // Fermer le modal
+          onClose();
+          
+          // Rediriger immédiatement
+          setTimeout(() => {
+            router.push('/dashboard?tab=reservations');
+            router.refresh();
+          }, 500);
+        } catch (err) {
+          console.error('Erreur lors de la mise à jour manuelle en local:', err);
+          // En cas d'erreur, fermer quand même et rediriger
+          onClose();
+          setTimeout(() => {
+            router.push('/dashboard?tab=reservations');
+            router.refresh();
+          }, 500);
+        }
+      } else {
+        // En production : attendre le webhook via polling
+        // Fermer le modal immédiatement pour éviter qu'il reste ouvert
+        onClose();
+        
+        // Commencer le polling après un court délai pour laisser le webhook se déclencher
+        setTimeout(pollStatus, 1000);
       }
-    } else if (response.status === 'failed' || response.status === 'error') {
-      setPaymentStatus('failed');
-      setError(response.message || 'Le paiement a échoué');
-      toast.error('Le paiement a échoué');
+      
     } else {
-      // Statut pending ou autre
-      setPaymentStatus('pending');
+      // Vérifier aussi les statuts en majuscules
+      const normalizedStatus = (response.status || '').toUpperCase();
+      if (normalizedStatus === 'FAILED' || normalizedStatus === 'ERROR' || normalizedStatus === 'CANCELLED') {
+        setPaymentStatus('failed');
+        setError(response.message || 'Le paiement a échoué');
+        toast.error('Le paiement a échoué');
+      } else {
+        // Statut pending ou autre
+        setPaymentStatus('pending');
+      }
     }
   };
 
