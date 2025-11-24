@@ -350,48 +350,74 @@ export function FeexPayPayment({
         }
       };
       
-      // En local, le webhook FeexPay ne peut pas atteindre localhost
-      // Donc on met à jour manuellement le statut et on redirige directement
-      const isLocal = typeof window !== 'undefined' && 
-                     (window.location.hostname === 'localhost' || 
-                      window.location.hostname === '127.0.0.1');
+      // Mettre à jour manuellement le statut immédiatement après paiement réussi
+      // Le callback FeexPay confirme que le paiement est réussi, donc on peut mettre à jour en toute sécurité
+      // Le webhook backend peut prendre du temps ou ne pas arriver, donc on met à jour manuellement pour l'UX
+      let statusUpdated = false;
+      try {
+        console.log('Mise à jour manuelle du statut de la réservation:', reservationId, 'paid');
+        const updateResult = await ReservationService.updateReservationStatus(reservationId, 'paid');
+        console.log('✅ Statut mis à jour manuellement:', updateResult);
+        statusUpdated = true;
+      } catch (err: any) {
+        console.error('Erreur lors de la mise à jour manuelle du statut:', err);
+        // Si la mise à jour échoue, on continue quand même car le webhook pourra mettre à jour plus tard
+        // Mais on affiche un avertissement à l'utilisateur
+        toast.warning('Paiement réussi, mais vérification du statut en cours...');
+      }
       
-      if (isLocal) {
-        // En local : mettre à jour manuellement le statut
-        try {
-          console.log('Mode local détecté - Mise à jour manuelle du statut');
-          await ReservationService.updateReservationStatus(reservationId, 'paid');
-          console.log('✅ Statut mis à jour manuellement en local');
-          
-          // Appeler le callback de succès
-          if (onPaymentSuccess) {
-            onPaymentSuccess();
-          }
-          
-          // Fermer le modal
-          onClose();
-          
-          // Rediriger immédiatement
-          setTimeout(() => {
-            router.push('/dashboard?tab=reservations');
-            router.refresh();
-          }, 500);
-        } catch (err) {
-          console.error('Erreur lors de la mise à jour manuelle en local:', err);
-          // En cas d'erreur, fermer quand même et rediriger
-          onClose();
-          setTimeout(() => {
-            router.push('/dashboard?tab=reservations');
-            router.refresh();
-          }, 500);
-        }
-      } else {
-        // En production : attendre le webhook via polling
-        // Fermer le modal immédiatement pour éviter qu'il reste ouvert
-        onClose();
+      // Appeler le callback de succès
+      if (onPaymentSuccess) {
+        onPaymentSuccess();
+      }
+      
+      // Fermer le modal
+      onClose();
+      
+      // Rediriger immédiatement vers la page de listing
+      setTimeout(() => {
+        router.push('/dashboard?tab=reservations');
+        router.refresh();
+      }, 500);
+      
+      // Vérification en arrière-plan pour confirmer que le statut est bien mis à jour
+      // (le webhook backend peut aussi mettre à jour, donc on vérifie)
+      if (!statusUpdated) {
+        // Si la mise à jour manuelle a échoué, faire un polling pour attendre le webhook
+        let verificationAttempts = 0;
+        const maxVerificationAttempts = 6; // 3 secondes
         
-        // Commencer le polling après un court délai pour laisser le webhook se déclencher
-        setTimeout(pollStatus, 1000);
+        const verifyStatus = async () => {
+          verificationAttempts++;
+          const isUpdated = await checkReservationStatus();
+          
+          if (isUpdated) {
+            console.log('✅ Statut confirmé par le backend (webhook ou autre)');
+            toast.success('Réservation confirmée !');
+          } else if (verificationAttempts < maxVerificationAttempts) {
+            // Réessayer après 500ms
+            setTimeout(verifyStatus, 500);
+          } else {
+            console.warn('⚠️ Le statut de la réservation n\'a pas été confirmé après plusieurs tentatives');
+            toast.warning('Vérifiez le statut de votre réservation dans quelques instants');
+          }
+        };
+        
+        // Commencer la vérification après 1 seconde pour laisser le webhook se déclencher
+        setTimeout(verifyStatus, 1000);
+      } else {
+        // Si la mise à jour manuelle a réussi, faire une vérification optionnelle pour confirmer
+        setTimeout(() => {
+          checkReservationStatus().then((isUpdated) => {
+            if (!isUpdated) {
+              console.warn('⚠️ Le statut semble avoir été réinitialisé, nouvelle tentative de mise à jour...');
+              // Réessayer une fois
+              ReservationService.updateReservationStatus(reservationId, 'paid').catch(() => {
+                console.error('Échec de la nouvelle tentative de mise à jour');
+              });
+            }
+          });
+        }, 2000);
       }
       
     } else {
