@@ -14,10 +14,20 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-// Fonction pour récupérer un espace par ID ou slug
+// Fonction pour récupérer un espace par ID ou slug avec timeout
 async function getSpaceByIdentifier(identifier: string) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   const apiUrl = getApiUrl();
+  
+  // Timeout de 15 secondes pour éviter les blocages
+  const createFetchWithTimeout = (url: string, options: RequestInit = {}) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    return fetch(url, {
+      ...options,
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeoutId));
+  };
   
   // Si c'est un nombre, utiliser directement comme ID
   // Essayer d'abord la route API Next.js (proxy), puis l'endpoint Django direct
@@ -26,39 +36,65 @@ async function getSpaceByIdentifier(identifier: string) {
     const nextApiUrl = `${baseUrl}/api/spaces/public/${parseInt(identifier)}`;
     const djangoUrl = `${apiUrl}/api/spaces/public/${parseInt(identifier)}/`;
     
-    // Essayer d'abord la route Next.js (proxy)
-    let response = await fetch(nextApiUrl, {
-      next: { revalidate: 3600 },
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
-    
-    // Si la route Next.js n'existe pas ou échoue, essayer directement Django
-    if (!response.ok && response.status === 404) {
-      response = await fetch(djangoUrl, {
+    try {
+      // Essayer d'abord la route Next.js (proxy)
+      let response = await createFetchWithTimeout(nextApiUrl, {
         next: { revalidate: 3600 },
         headers: {
           'Accept': 'application/json',
         },
       });
-    }
-    
-    if (response.ok) {
-      return response;
+      
+      // Si la route Next.js n'existe pas ou échoue, essayer directement Django
+      if (!response.ok && response.status === 404) {
+        response = await createFetchWithTimeout(djangoUrl, {
+          next: { revalidate: 3600 },
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+      }
+      
+      if (response.ok) {
+        return response;
+      }
+    } catch (error) {
+      // En cas de timeout ou d'erreur, essayer directement Django
+      try {
+        const response = await createFetchWithTimeout(djangoUrl, {
+          next: { revalidate: 3600 },
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+        if (response.ok) {
+          return response;
+        }
+      } catch (e) {
+        // Ignorer l'erreur et continuer
+      }
     }
   }
   
   // Sinon, chercher dans la liste des espaces pour trouver l'ID correspondant au slug
   try {
+    const createFetchWithTimeout = (url: string, options: RequestInit = {}) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      return fetch(url, {
+        ...options,
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeoutId));
+    };
+    
     // Essayer d'abord la route API Next.js (proxy)
-    let listResponse = await fetch(`${baseUrl}/api/spaces/public`, {
+    let listResponse = await createFetchWithTimeout(`${baseUrl}/api/spaces/public`, {
       next: { revalidate: 3600 },
     });
     
     // Si la route Next.js n'existe pas, essayer directement Django
     if (!listResponse.ok && listResponse.status === 404) {
-      listResponse = await fetch(`${apiUrl}/api/spaces/public/`, {
+      listResponse = await createFetchWithTimeout(`${apiUrl}/api/spaces/public/`, {
         next: { revalidate: 3600 },
       });
     }
@@ -99,7 +135,7 @@ async function getSpaceByIdentifier(identifier: string) {
       
       if (foundSpace && foundSpace.id) {
         // Récupérer l'espace par son ID numérique
-        const response = await fetch(`${apiUrl}/api/spaces/public/${foundSpace.id}/`, {
+        const response = await createFetchWithTimeout(`${apiUrl}/api/spaces/public/${foundSpace.id}/`, {
           next: { revalidate: 3600 },
         });
         if (response.ok) {
@@ -112,9 +148,22 @@ async function getSpaceByIdentifier(identifier: string) {
   }
 
   // Dernier recours : essayer avec l'identifiant tel quel (peut être un slug supporté par l'API)
-  return await fetch(`${apiUrl}/api/spaces/public/${identifier}/`, {
-    next: { revalidate: 3600 },
-  });
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const response = await fetch(`${apiUrl}/api/spaces/public/${identifier}/`, {
+      next: { revalidate: 3600 },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    // Retourner une réponse d'erreur si tout échoue
+    return new Response(JSON.stringify({ error: 'Espace non trouvé' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 }
 
 // Générer les metadata dynamiques pour chaque espace
@@ -179,33 +228,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-// Générer les paramètres statiques pour le SSG
+// Permettre le rendu dynamique si la génération statique échoue
+export const dynamicParams = true;
+// Désactiver la génération statique au build pour éviter les timeouts
+export const dynamic = 'force-dynamic';
+
+// Générer les paramètres statiques pour le SSG (optionnel, mais désactivé pour éviter les timeouts)
 export async function generateStaticParams() {
-  try {
-    const apiUrl = getApiUrl();
-        const response = await fetch(`${apiUrl}/api/spaces/public/`, {
-      next: { revalidate: 3600 }, // Revalider toutes les heures
-    });
-
-    if (!response.ok) {
-      return [];
-    }
-
-    const data = await response.json();
-    // Gérer le format de réponse de l'endpoint public
-    const spacesData = data.data || data.results || data;
-    const spaces = Array.isArray(spacesData) ? spacesData : [spacesData];
-
-    return spaces
-      .filter((space: any) => space.is_active !== false)
-      .map((space: any) => ({
-        // Utiliser le slug s'il existe, sinon l'ID
-        id: space.slug || space.identifier || space.id.toString(),
-      }));
-  } catch (error) {
-    console.error('Erreur lors de la génération des paramètres statiques:', error);
-    return [];
-  }
+  // Retourner un tableau vide pour forcer le rendu dynamique
+  // Cela évite les timeouts lors du build
+  return [];
 }
 
 export default async function SpaceDetailPage({ params }: PageProps) {

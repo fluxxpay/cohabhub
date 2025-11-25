@@ -42,24 +42,34 @@ RUN echo "=== Generating Prisma Client ===" && \
     ls -la node_modules/.prisma/client 2>&1 || echo "⚠️ Prisma client directory not found"
 
 # Build Next.js avec le script qui capture toutes les erreurs
-RUN ./build.sh || true
-
-# Afficher les erreurs capturées même si le build a échoué
-RUN if [ -f /tmp/build.log ]; then \
-        echo "=== BUILD OUTPUT (first 500 lines) ==="; \
-        head -500 /tmp/build.log 2>/dev/null || echo "No build log"; \
-        echo "=== BUILD OUTPUT (last 500 lines) ==="; \
-        tail -500 /tmp/build.log 2>/dev/null || echo "No build log"; \
-        echo "=== ERRORS FOUND ==="; \
-        grep -i "error\|failed\|fatal" /tmp/build.log 2>/dev/null | head -50 || echo "No errors found"; \
-    fi
-
-# Vérifier si le build a réussi
-RUN if [ ! -d ".next/standalone" ]; then \
-        echo "❌ BUILD FAILED: .next/standalone not found"; \
+# Le script affiche les logs et sort avec le bon code d'erreur
+RUN ./build.sh || { \
+        echo "=== BUILD SCRIPT FAILED ==="; \
+        echo "=== Checking if .next exists ==="; \
         ls -la .next/ 2>&1 || echo "No .next directory"; \
+        if [ -d ".next" ]; then \
+            echo "=== Contents of .next ==="; \
+            find .next -maxdepth 2 -type d 2>&1 | head -20; \
+        fi; \
+        if [ -f /tmp/build.log ]; then \
+            echo "=== Last 300 lines of build log ==="; \
+            tail -300 /tmp/build.log; \
+        fi; \
         exit 1; \
-    fi
+    }
+
+# Vérification finale que standalone existe
+RUN if [ ! -d ".next/standalone" ]; then \
+        echo "❌ FINAL CHECK FAILED: .next/standalone not found after build"; \
+        echo "=== Contents of .next directory ==="; \
+        ls -la .next/ 2>&1 || echo "No .next directory"; \
+        if [ -d ".next" ]; then \
+            echo "=== Listing .next contents ==="; \
+            find .next -maxdepth 3 -type d 2>&1 | head -30; \
+        fi; \
+        exit 1; \
+    fi && \
+    echo "✓ Build verification successful: .next/standalone exists"
 
 # ---- Runner ----
 

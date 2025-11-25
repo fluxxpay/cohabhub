@@ -18,22 +18,31 @@ ls -la prisma/schema.prisma 2>&1
 
 echo "=== Running npm run build ==="
 BUILD_EXIT_CODE=0
-npm run build > /tmp/build.log 2>&1 || BUILD_EXIT_CODE=$?
+npm run build 2>&1 | tee /tmp/build.log || BUILD_EXIT_CODE=$?
 
 echo "=== Build command finished with exit code: $BUILD_EXIT_CODE ==="
-echo "=== Full build output (first 500 lines) ==="
-head -500 /tmp/build.log
-echo "=== Full build output (last 500 lines) ==="
-tail -500 /tmp/build.log
 
 if [ $BUILD_EXIT_CODE -ne 0 ]; then
     echo "❌ BUILD FAILED with exit code $BUILD_EXIT_CODE"
+    echo "=== Full build output (first 500 lines) ==="
+    head -500 /tmp/build.log 2>/dev/null || echo "No build log"
+    echo "=== Full build output (last 500 lines) ==="
+    tail -500 /tmp/build.log 2>/dev/null || echo "No build log"
     echo "=== Checking .next directory ==="
     ls -la .next/ 2>&1 || echo "No .next directory found"
+    if [ -d ".next" ]; then
+        echo "=== Contents of .next ==="
+        find .next -maxdepth 2 -type d 2>&1 | head -20
+    fi
     echo "=== Searching for error patterns in build log ==="
-    grep -i "error\|failed\|fatal" /tmp/build.log | head -50
+    grep -i "error\|failed\|fatal\|TypeError\|SyntaxError" /tmp/build.log 2>/dev/null | head -50 || echo "No error patterns found"
     exit $BUILD_EXIT_CODE
 fi
+
+echo "=== Full build output (first 500 lines) ==="
+head -500 /tmp/build.log 2>/dev/null || echo "No build log"
+echo "=== Full build output (last 500 lines) ==="
+tail -500 /tmp/build.log 2>/dev/null || echo "No build log"
 
 echo "=== Build completed successfully ==="
 echo "=== Verifying build output ==="
