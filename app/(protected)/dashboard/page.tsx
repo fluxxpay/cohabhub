@@ -41,6 +41,9 @@ function DashboardContent() {
     const tab = searchParams?.get('tab') as DashboardTab | null;
     if (tab && validTabs.includes(tab)) {
       setActiveTab(tab);
+    } else {
+      // Si pas de paramètre tab ou tab invalide, utiliser 'overview' par défaut
+      setActiveTab('overview');
     }
   }, [searchParams]);
 
