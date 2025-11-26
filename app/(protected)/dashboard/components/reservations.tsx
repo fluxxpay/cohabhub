@@ -103,6 +103,60 @@ export default function Reservations() {
   const [refundToWallet, setRefundToWallet] = useState(false);
   const [session, setSession] = useState<ReservationSession | null>(null);
   const [loadingSession, setLoadingSession] = useState(false);
+  const [spaceLiberationAlert, setSpaceLiberationAlert] = useState<{
+    show: boolean;
+    nextReservationTime: string | null;
+    gracePeriodMinutes: number;
+  }>({ show: false, nextReservationTime: null, gracePeriodMinutes: 10 });
+  const [availableSlots, setAvailableSlots] = useState<Array<{ start: string; end: string }>>([]);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
+  
+  // Polling pour mettre à jour la session en temps réel si elle est active
+  useEffect(() => {
+    if (!session || session.status !== 'checked_in' || !selectedReservation) {
+      return;
+    }
+    
+    const interval = setInterval(async () => {
+      try {
+        const sessionData = await CheckInService.getUserSession(parseInt(selectedReservation.id));
+        const updatedSession = sessionData.session;
+        if (updatedSession) {
+          setSession(updatedSession);
+          
+          // Recalculer l'alerte de libération
+          if (updatedSession.status === 'checked_in' && updatedSession.reserved_duration_hours) {
+            const remainingHours = updatedSession.remaining_reserved_time_hours || 0;
+            const isInGracePeriod = remainingHours <= 0 && updatedSession.current_duration_hours > 0;
+            
+            if (isInGracePeriod) {
+              const checkInTime = new Date(updatedSession.check_in_time!);
+              const reservedEndTime = new Date(checkInTime.getTime() + (updatedSession.reserved_duration_hours * 60 * 60 * 1000));
+              const now = new Date();
+              const timeSinceEnd = (now.getTime() - reservedEndTime.getTime()) / 1000 / 60;
+              
+              if (timeSinceEnd >= 0 && timeSinceEnd <= 10) {
+                const graceEndTime = new Date(reservedEndTime.getTime() + (10 * 60 * 1000));
+                setSpaceLiberationAlert({
+                  show: true,
+                  nextReservationTime: graceEndTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+                  gracePeriodMinutes: 10
+                });
+              } else {
+                setSpaceLiberationAlert({ show: false, nextReservationTime: null, gracePeriodMinutes: 10 });
+              }
+            } else {
+              setSpaceLiberationAlert({ show: false, nextReservationTime: null, gracePeriodMinutes: 10 });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors de la mise à jour de la session:', error);
+      }
+    }, 5000); // Mise à jour toutes les 5 secondes
+    
+    return () => clearInterval(interval);
+  }, [session?.id, selectedReservation?.id]);
 
   const fetchReservations = async () => {
     try {
@@ -196,19 +250,54 @@ export default function Reservations() {
       setLoadingSession(true);
       try {
         const sessionData = await CheckInService.getUserSession(parseInt(reservation.id));
-        setSession(sessionData.session || null);
+        const loadedSession = sessionData.session || null;
+        setSession(loadedSession);
+        
+        // Vérifier si l'espace doit être libéré (si session active et temps réservé écoulé)
+        if (loadedSession && loadedSession.status === 'checked_in' && loadedSession.reserved_duration_hours) {
+          // Vérifier si le temps réservé est écoulé (remaining_reserved_time_hours <= 0)
+          // et si on est dans la période de grâce (pas encore d'heures supplémentaires facturables)
+          const remainingHours = loadedSession.remaining_reserved_time_hours || 0;
+          const isInGracePeriod = remainingHours <= 0 && loadedSession.current_duration_hours > 0;
+          
+          if (isInGracePeriod) {
+            // Calculer l'heure de fin théorique pour afficher
+            const checkInTime = new Date(loadedSession.check_in_time!);
+            const reservedEndTime = new Date(checkInTime.getTime() + (loadedSession.reserved_duration_hours * 60 * 60 * 1000));
+            const graceEndTime = new Date(reservedEndTime.getTime() + (10 * 60 * 1000));
+            const now = new Date();
+            
+            // Si on est dans la période de grâce (0 à 10 minutes après la fin)
+            const timeSinceEnd = (now.getTime() - reservedEndTime.getTime()) / 1000 / 60; // en minutes
+            if (timeSinceEnd >= 0 && timeSinceEnd <= 10) {
+              setSpaceLiberationAlert({
+                show: true,
+                nextReservationTime: graceEndTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+                gracePeriodMinutes: 10
+              });
+            } else {
+              setSpaceLiberationAlert({ show: false, nextReservationTime: null, gracePeriodMinutes: 10 });
+            }
+          } else {
+            setSpaceLiberationAlert({ show: false, nextReservationTime: null, gracePeriodMinutes: 10 });
+          }
+        } else {
+          setSpaceLiberationAlert({ show: false, nextReservationTime: null, gracePeriodMinutes: 10 });
+        }
       } catch (error) {
         console.error('Erreur lors du chargement de la session:', error);
         setSession(null);
+        setSpaceLiberationAlert({ show: false, nextReservationTime: null, gracePeriodMinutes: 10 });
       } finally {
         setLoadingSession(false);
       }
     } else {
       setSession(null);
+      setSpaceLiberationAlert({ show: false, nextReservationTime: null, gracePeriodMinutes: 10 });
     }
   };
 
-  const handleEdit = (reservation: Reservation) => {
+  const handleEdit = async (reservation: Reservation) => {
     setSelectedReservation(reservation);
     setEditForm({
       event_name: reservation.event_name,
@@ -223,6 +312,26 @@ export default function Reservations() {
     });
     setError('');
     setShowEditModal(true);
+    
+    // Charger les disponibilités pour la date actuelle
+    if (reservation.space_category !== 'appartement' && reservation.date) {
+      await loadAvailabilityForDate(reservation.space_id, reservation.date);
+    }
+  };
+
+  const loadAvailabilityForDate = async (spaceId: string, date: string) => {
+    if (!spaceId || !date) return;
+    
+    try {
+      setLoadingAvailability(true);
+      const availability = await ReservationService.getSpaceAvailability(spaceId, date);
+      setAvailableSlots(availability.available_slots || []);
+    } catch (error: any) {
+      console.error('Erreur lors du chargement des disponibilités:', error);
+      setAvailableSlots([]);
+    } finally {
+      setLoadingAvailability(false);
+    }
   };
 
   const handleDelete = (reservation: Reservation) => {
@@ -925,18 +1034,40 @@ export default function Reservations() {
                               </span>
                             </div>
                             {session.reserved_duration_hours && (
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">Temps restant</span>
-                                <span className="text-lg font-semibold text-gray-700">
-                                  {session.remaining_time_formatted}
-                                </span>
-                              </div>
+                              <>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-gray-600">Temps restant</span>
+                                  <span className="text-lg font-semibold text-gray-700">
+                                    {session.remaining_time_formatted}
+                                  </span>
+                                </div>
+                                {/* Afficher la période de grâce si le temps réservé est écoulé mais pas encore facturé */}
+                                {session.remaining_reserved_time_hours !== undefined && 
+                                 session.remaining_reserved_time_hours <= 0 && 
+                                 !session.is_overtime && (
+                                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs text-green-800">
+                                    <span className="font-semibold">⏰ Période de grâce :</span> Vous avez encore <strong>10 minutes</strong> avant que les heures supplémentaires ne soient facturées.
+                                  </div>
+                                )}
+                              </>
                             )}
-                            {session.is_overtime && (
+                            {spaceLiberationAlert.show && (
+                              <Alert className="mt-2 bg-orange-50 border-orange-300">
+                                <AlertCircle className="h-4 w-4 text-orange-600" />
+                                <AlertDescription className="text-orange-900 text-sm">
+                                  <div className="font-semibold mb-1">⚠️ Libération de l'espace requise</div>
+                                  <p className="mb-2">Votre réservation se termine. Vous avez <strong>{spaceLiberationAlert.gracePeriodMinutes} minutes de grâce</strong> pour libérer l'espace avant que les heures supplémentaires ne soient facturées.</p>
+                                  {spaceLiberationAlert.nextReservationTime && (
+                                    <p className="text-xs mt-1">Prochaine réservation à {spaceLiberationAlert.nextReservationTime}</p>
+                                  )}
+                                </AlertDescription>
+                              </Alert>
+                            )}
+                            {session.is_overtime && !spaceLiberationAlert.show && (
                               <Alert className="mt-2 bg-yellow-50 border-yellow-200">
                                 <AlertCircle className="h-4 w-4 text-yellow-600" />
                                 <AlertDescription className="text-yellow-800 text-sm">
-                                  Heures supplémentaires en cours
+                                  Heures supplémentaires en cours (période de grâce écoulée)
                                 </AlertDescription>
                               </Alert>
                             )}
@@ -1024,12 +1155,21 @@ export default function Reservations() {
                   <Input
                     id="date"
                     type="date"
+                    min={new Date().toISOString().split('T')[0]}
                     value={editForm.date}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, date: e.target.value })
-                    }
+                    onChange={async (e) => {
+                      const newDate = e.target.value;
+                      setEditForm({ ...editForm, date: newDate, start_time: '', end_time: '' });
+                      // Charger les disponibilités pour la nouvelle date
+                      if (selectedReservation && selectedReservation.space_category !== 'appartement' && newDate) {
+                        await loadAvailabilityForDate(selectedReservation.space_id, newDate);
+                      }
+                    }}
                     required
                   />
+                  {loadingAvailability && (
+                    <p className="text-xs text-gray-500">Chargement des disponibilités...</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -1075,23 +1215,51 @@ export default function Reservations() {
                       id="start_time"
                       type="time"
                       value={editForm.start_time}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, start_time: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const newStartTime = e.target.value;
+                        setEditForm({ ...editForm, start_time: newStartTime });
+                        // Réinitialiser l'heure de fin si elle est avant la nouvelle heure de début
+                        if (editForm.end_time && newStartTime >= editForm.end_time) {
+                          setEditForm({ ...editForm, start_time: newStartTime, end_time: '' });
+                        }
+                      }}
                       required
+                      list="available-start-times"
                     />
+                    <datalist id="available-start-times">
+                      {availableSlots.map((slot, index) => (
+                        <option key={`start-${index}`} value={slot.start} />
+                      ))}
+                    </datalist>
+                    {availableSlots.length === 0 && editForm.date && !loadingAvailability && (
+                      <p className="text-xs text-yellow-600">Aucun créneau disponible pour cette date</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="end_time">Heure de fin</Label>
                     <Input
                       id="end_time"
                       type="time"
+                      min={editForm.start_time || undefined}
                       value={editForm.end_time}
                       onChange={(e) =>
                         setEditForm({ ...editForm, end_time: e.target.value })
                       }
                       required
+                      list="available-end-times"
                     />
+                    <datalist id="available-end-times">
+                      {availableSlots
+                        .filter(slot => !editForm.start_time || slot.start >= editForm.start_time)
+                        .map((slot, index) => (
+                          <option key={`end-${index}`} value={slot.end} />
+                        ))}
+                    </datalist>
+                    {editForm.start_time && editForm.end_time && (
+                      <p className="text-xs text-gray-500">
+                        Vérifiez que le créneau {editForm.start_time} - {editForm.end_time} est disponible
+                      </p>
+                    )}
                   </div>
                 </div>
               )}

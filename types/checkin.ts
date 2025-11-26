@@ -139,3 +139,27 @@ export interface ApiError {
   [key: string]: any;
 }
 
+export interface ExtensionSlot {
+  start: string;
+  end: string;
+  duration_hours?: number;
+  hours?: number;
+}
+
+export interface SpaceExtensionOption {
+  space_id: number;
+  space_name: string;
+  slots: ExtensionSlot[];
+}
+
+export interface ExtensionAvailability {
+  same_space: ExtensionSlot[];
+  other_spaces: SpaceExtensionOption[];
+}
+
+export interface ExtensionAvailabilityResponse {
+  success: boolean;
+  available_extensions: ExtensionAvailability;
+  error?: string;
+}
+

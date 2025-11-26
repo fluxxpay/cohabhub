@@ -13,6 +13,7 @@ import type {
   CheckInResponse,
   CheckOutResponse,
   ApiError,
+  ExtensionAvailabilityResponse,
 } from '@/types/checkin';
 
 
@@ -236,6 +237,28 @@ export class CheckInService {
     } catch (error: any) {
       console.error('Erreur lors de la récupération de la session utilisateur:', error);
       throw new Error(error.message || 'Erreur lors de la récupération de la session');
+    }
+  }
+
+  /**
+   * Récupère les disponibilités pour prolonger une réservation
+   */
+  static async getExtensionAvailability(reservationId: number): Promise<ExtensionAvailabilityResponse> {
+    try {
+      const endpoint = `/api/reservations/${reservationId}/extend-availability/`;
+      const result = await apiFetch<ExtensionAvailabilityResponse>(endpoint, {
+        method: 'GET',
+      });
+
+      if (!result.response?.ok) {
+        const error: ApiError = result.data as ApiError;
+        throw new Error(error.error || error.detail || error.message || 'Erreur lors de la récupération des disponibilités');
+      }
+
+      return result.data as ExtensionAvailabilityResponse;
+    } catch (error: any) {
+      console.error('Erreur lors de la récupération des disponibilités:', error);
+      throw new Error(error.message || 'Erreur lors de la récupération des disponibilités');
     }
   }
 }

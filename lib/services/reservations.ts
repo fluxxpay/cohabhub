@@ -92,6 +92,11 @@ export interface CalendarSlot {
   price?: string;
 }
 
+export interface SpaceAvailability {
+  occupied_slots: Array<{ start: string; end: string }>;
+  available_slots: Array<{ start: string; end: string }>;
+}
+
 export interface CalendarReservation {
   id: string;
   space: string;
@@ -453,6 +458,43 @@ export class ReservationService {
     } catch (error) {
       console.error('Erreur lors de la récupération des réservations par jour:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Récupère les disponibilités d'un espace pour une date donnée
+   */
+  static async getSpaceAvailability(
+    spaceId: string | number,
+    date: string
+  ): Promise<SpaceAvailability> {
+    try {
+      const result = await apiFetch<SpaceAvailability>(
+        `/api/spaces/${spaceId}/availability/?date=${date}`,
+        {
+          method: 'GET',
+        }
+      );
+
+      if (!result.response?.ok) {
+        const errorData = result.data as ApiError;
+        throw new ReservationError(
+          errorData?.detail || 'Erreur lors de la récupération des disponibilités',
+          'AVAILABILITY_ERROR',
+          errorData
+        );
+      }
+
+      return result.data as SpaceAvailability;
+    } catch (error) {
+      if (error instanceof ReservationError) {
+        throw error;
+      }
+      console.error('Erreur lors de la récupération des disponibilités:', error);
+      throw new ReservationError(
+        'Erreur lors de la récupération des disponibilités',
+        'UNKNOWN_ERROR'
+      );
     }
   }
 }
