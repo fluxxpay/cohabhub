@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useInView } from 'framer-motion';
-import { useRef } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { 
   Star, 
   Quotes,
@@ -13,12 +13,19 @@ import {
   Heart,
   ArrowRight
 } from '@phosphor-icons/react';
+import { ReviewService } from '@/lib/services/reviews';
+import type { Review } from '@/types/reviews';
+import { StarRating } from '@/components/ui/star-rating';
 
 export const TestimonialsSection = () => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [stats, setStats] = useState<{ average_rating: number; total_reviews: number } | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const testimonials = [
+  // Fallback testimonials (utilisés si aucun avis n'est disponible)
+  const fallbackTestimonials = [
     {
       name: "Marie Dubois",
       role: "Designer UX/UI",
@@ -57,11 +64,58 @@ export const TestimonialsSection = () => {
     }
   ];
 
-  const stats = [
-    { number: "98%", label: "Satisfaction client", icon: Heart },
-    { number: "150+", label: "Membres actifs", icon: User },
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        setLoading(true);
+        // Récupérer les meilleurs avis approuvés
+        const topReviews = await ReviewService.getTopReviews(6);
+        setReviews(topReviews);
+
+        // Calculer les statistiques
+        if (topReviews.length > 0) {
+          const totalRating = topReviews.reduce((sum, r) => sum + r.overall_rating, 0);
+          const averageRating = totalRating / topReviews.length;
+          setStats({
+            average_rating: averageRating,
+            total_reviews: topReviews.length,
+          });
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des avis:', error);
+        // En cas d'erreur, utiliser les témoignages fallback
+        setReviews([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReviews();
+  }, []);
+
+  // Utiliser les avis réels ou les témoignages fallback
+  const testimonials = reviews.length > 0 
+    ? reviews.slice(0, 4).map((review) => ({
+        name: review.is_anonymous ? 'Utilisateur anonyme' : review.user_name,
+        role: review.reservation_date ? `Réservation du ${new Date(review.reservation_date).toLocaleDateString('fr-FR')}` : 'Membre',
+        company: review.space_name,
+        content: review.comment || 'Excellent espace !',
+        rating: review.overall_rating,
+        avatar: "/api/placeholder/80/80",
+        icon: User
+      }))
+    : fallbackTestimonials;
+
+  const displayStats = stats || {
+    average_rating: 4.9,
+    total_reviews: 150,
+  };
+
+  const statsData = [
+    { number: `${Math.round(displayStats.average_rating * 10) / 10}/5`, label: "Note moyenne", icon: Star },
+    { number: `${displayStats.total_reviews}+`, label: "Avis clients", icon: User },
     { number: "50+", label: "Événements par an", icon: Rocket },
-    { number: "4.9/5", label: "Note moyenne", icon: Star }
+    { number: "98%", label: "Satisfaction client", icon: Heart }
   ];
 
   return (
@@ -98,47 +152,63 @@ export const TestimonialsSection = () => {
         </motion.div>
 
         {/* Testimonials Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-20">
-          {testimonials.map((testimonial, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 30 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.8, delay: index * 0.2 }}
-              className="group bg-white rounded-2xl p-8 hover:shadow-medium transition-all duration-300 border border-primary-100"
-            >
-              {/* Quote Icon */}
-              <div className="flex items-start justify-between mb-6">
-                <Quotes className="h-8 w-8 text-accent-500" weight="duotone" />
-                <div className="flex space-x-1">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="h-4 w-4 text-accent-400" weight="fill" />
-                  ))}
-                </div>
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-20">
+            {[...Array(4)].map((_, index) => (
+              <div key={index} className="bg-white rounded-2xl p-8 border border-primary-100 animate-pulse">
+                <div className="h-8 w-8 bg-gray-200 rounded mb-6"></div>
+                <div className="h-4 bg-gray-200 rounded mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-10 w-10 bg-gray-200 rounded-full mt-6"></div>
               </div>
-
-              {/* Testimonial Content */}
-              <blockquote className="text-primary-600 mb-6 font-body leading-relaxed">
-                "{testimonial.content}"
-              </blockquote>
-
-              {/* Author Info */}
-              <div className="flex items-center space-x-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-accent-100 to-accent-200 rounded-full flex items-center justify-center">
-                  <testimonial.icon className="h-5 w-5 text-accent-600" weight="duotone" />
-                </div>
-                <div>
-                  <div className="font-display text-primary-900 font-semibold">
-                    {testimonial.name}
-                  </div>
-                  <div className="text-sm text-primary-500 font-body">
-                    {testimonial.role} • {testimonial.company}
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-20">
+            {testimonials.map((testimonial, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 30 }}
+                animate={isInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.8, delay: index * 0.2 }}
+                className="group bg-white rounded-2xl p-8 hover:shadow-medium transition-all duration-300 border border-primary-100"
+              >
+                {/* Quote Icon */}
+                <div className="flex items-start justify-between mb-6">
+                  <Quotes className="h-8 w-8 text-accent-500" weight="duotone" />
+                  <div className="flex items-center">
+                    <StarRating 
+                      rating={testimonial.rating} 
+                      readOnly 
+                      size="sm" 
+                      maxStars={5}
+                    />
                   </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+
+                {/* Testimonial Content */}
+                <blockquote className="text-primary-600 mb-6 font-body leading-relaxed">
+                  "{testimonial.content}"
+                </blockquote>
+
+                {/* Author Info */}
+                <div className="flex items-center space-x-4">
+                  <div className="w-10 h-10 bg-gradient-to-br from-accent-100 to-accent-200 rounded-full flex items-center justify-center">
+                    <testimonial.icon className="h-5 w-5 text-accent-600" weight="duotone" />
+                  </div>
+                  <div>
+                    <div className="font-display text-primary-900 font-semibold">
+                      {testimonial.name}
+                    </div>
+                    <div className="text-sm text-primary-500 font-body">
+                      {testimonial.role} • {testimonial.company}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
         {/* Stats Section */}
         <motion.div
@@ -157,7 +227,7 @@ export const TestimonialsSection = () => {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
+            {statsData.map((stat, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, scale: 0.8 }}

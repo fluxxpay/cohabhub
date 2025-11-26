@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { 
   House, Users, Buildings, Calendar, CreditCard, ChartLine, Gear, Bell,
-  Gift, Package, ArrowRight, List, X, SignOut, User, CaretLeft
+  Gift, Package, ArrowRight, List, X, SignOut, User, CaretLeft, SignIn
 } from '@phosphor-icons/react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -20,9 +20,10 @@ import Analytics from '@/components/admin/Analytics';
 import AdminSettings from '@/components/admin/AdminSettings';
 import Notifications from '@/components/admin/Notifications';
 import ReferralManagement from '@/components/admin/ReferralManagement';
+import CheckInManagement from '@/components/admin/CheckInManagement';
 import OptionsManagement from '@/components/admin/OptionsManagement';
 
-type AdminTab = 'overview' | 'users' | 'spaces' | 'reservations' | 'billing' | 'analytics' | 'settings' | 'notifications' | 'referrals' | 'options';
+type AdminTab = 'overview' | 'users' | 'spaces' | 'reservations' | 'checkin' | 'billing' | 'analytics' | 'settings' | 'notifications' | 'referrals' | 'options';
 
 export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
@@ -59,6 +60,7 @@ export default function AdminDashboardPage() {
     { id: 'options' as AdminTab, name: 'Options', icon: Package, description: 'Gérer les services' },
     { id: 'spaces' as AdminTab, name: 'Espaces', icon: Buildings, description: 'Gérer les espaces' },
     { id: 'reservations' as AdminTab, name: 'Réservations', icon: Calendar, description: 'Gérer les réservations' },
+    { id: 'checkin' as AdminTab, name: 'Check-in', icon: SignIn, description: 'Gérer les check-in/check-out' },
     { id: 'billing' as AdminTab, name: 'Facturation', icon: CreditCard, description: 'Gérer la facturation' },
     { id: 'referrals' as AdminTab, name: 'Parrainage', icon: Gift, description: 'Gérer les parrainages' },
     { id: 'analytics' as AdminTab, name: 'Analytics', icon: ChartLine, description: 'Statistiques et rapports' },
@@ -78,6 +80,8 @@ export default function AdminDashboardPage() {
         return <SpacesManagement />;
       case 'reservations': 
         return <ReservationsManagement />;
+      case 'checkin': 
+        return <CheckInManagement />;
       case 'billing': 
         return <BillingManagement />;
       case 'referrals': 

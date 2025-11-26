@@ -31,6 +31,7 @@ import {
   Filter,
   AlertCircle,
   Loader2,
+  Timer,
 } from 'lucide-react';
 import { ReservationService, type Reservation, type ReservationUpdatePayload } from '@/lib/services/reservations';
 import {
@@ -57,6 +58,8 @@ import { cn } from '@/lib/utils';
 import { FeexPayPayment } from './feexpay-payment';
 import { ProfileService, type UserProfile } from '@/lib/services/profile';
 import { CreditCard as CreditCardIcon } from 'lucide-react';
+import { CheckInService } from '@/lib/services/checkin';
+import type { ReservationSession } from '@/types/checkin';
 
 // Types importés depuis le service
 
@@ -98,6 +101,8 @@ export default function Reservations() {
   const [paymentReservation, setPaymentReservation] = useState<Reservation | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [refundToWallet, setRefundToWallet] = useState(false);
+  const [session, setSession] = useState<ReservationSession | null>(null);
+  const [loadingSession, setLoadingSession] = useState(false);
 
   const fetchReservations = async () => {
     try {
@@ -183,9 +188,24 @@ export default function Reservations() {
     },
   ];
 
-  const handleView = (reservation: Reservation) => {
+  const handleView = async (reservation: Reservation) => {
     setSelectedReservation(reservation);
     setShowViewModal(true);
+    // Charger la session si la réservation est payée
+    if (reservation.status === 'paid') {
+      setLoadingSession(true);
+      try {
+        const sessionData = await CheckInService.getUserSession(parseInt(reservation.id));
+        setSession(sessionData.session || null);
+      } catch (error) {
+        console.error('Erreur lors du chargement de la session:', error);
+        setSession(null);
+      } finally {
+        setLoadingSession(false);
+      }
+    } else {
+      setSession(null);
+    }
   };
 
   const handleEdit = (reservation: Reservation) => {
@@ -860,6 +880,109 @@ export default function Reservations() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Section Session */}
+              {selectedReservation.status === 'paid' && (
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Timer className="h-5 w-5" />
+                      Session de check-in
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {loadingSession ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary-500" />
+                      </div>
+                    ) : session ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Statut</span>
+                          <Badge
+                            className={
+                              session.status === 'checked_in'
+                                ? 'bg-green-500'
+                                : session.status === 'checked_out'
+                                ? 'bg-gray-500'
+                                : 'bg-yellow-500'
+                            }
+                          >
+                            {session.status === 'checked_in'
+                              ? 'En cours'
+                              : session.status === 'checked_out'
+                              ? 'Terminée'
+                              : 'En attente'}
+                          </Badge>
+                        </div>
+
+                        {session.status === 'checked_in' && (
+                          <div className="bg-primary-50 p-4 rounded-lg space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-gray-600">Temps écoulé</span>
+                              <span className="text-2xl font-bold text-primary-600">
+                                {session.elapsed_time_formatted}
+                              </span>
+                            </div>
+                            {session.reserved_duration_hours && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">Temps restant</span>
+                                <span className="text-lg font-semibold text-gray-700">
+                                  {session.remaining_time_formatted}
+                                </span>
+                              </div>
+                            )}
+                            {session.is_overtime && (
+                              <Alert className="mt-2 bg-yellow-50 border-yellow-200">
+                                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                                <AlertDescription className="text-yellow-800 text-sm">
+                                  Heures supplémentaires en cours
+                                </AlertDescription>
+                              </Alert>
+                            )}
+                          </div>
+                        )}
+
+                        {session.check_in_time && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">Check-in</span>
+                            <span className="font-medium">
+                              {new Date(session.check_in_time).toLocaleString('fr-FR')}
+                            </span>
+                          </div>
+                        )}
+
+                        {session.check_out_time && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">Check-out</span>
+                            <span className="font-medium">
+                              {new Date(session.check_out_time).toLocaleString('fr-FR')}
+                            </span>
+                          </div>
+                        )}
+
+                        {session.actual_duration_hours && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">Durée réelle</span>
+                            <span className="font-medium">{session.actual_duration_hours}h</span>
+                          </div>
+                        )}
+
+                        {session.overtime_hours > 0 && (
+                          <div className="flex items-center justify-between text-sm text-yellow-600">
+                            <span>Heures supplémentaires</span>
+                            <span className="font-medium">{session.overtime_hours}h</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-600 text-center py-4">
+                        Aucune session pour cette réservation
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
         </DialogContent>

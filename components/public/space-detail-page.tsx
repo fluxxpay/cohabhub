@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { formatXof } from '@/utils/currency';
 import type { Space } from '@/lib/services/spaces';
 import { PublicFooter } from '@/components/public/footer';
+import { ReviewsSection } from './reviews-section';
 
 interface SpaceDetailPageProps {
   space: Space;
@@ -120,7 +121,7 @@ export function SpaceDetailPage({ space }: SpaceDetailPageProps) {
 
             {/* Caractéristiques */}
             {space.options && space.options.length > 0 && (
-              <div className="bg-white rounded-2xl p-6 shadow-lg">
+              <div className="bg-white rounded-2xl p-6 shadow-lg mb-6">
                 <h2 className="text-2xl font-bold text-primary-900 mb-4">Équipements</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {space.options.map((option, index) => {
@@ -137,6 +138,17 @@ export function SpaceDetailPage({ space }: SpaceDetailPageProps) {
                 </div>
               </div>
             )}
+
+            {/* Section Avis */}
+            <ReviewsSection 
+              spaceId={space.id}
+              spaceName={space.name}
+              showCreateButton={true}
+              onReviewClick={() => {
+                // Rediriger vers le dashboard pour créer un avis
+                router.push('/dashboard?tab=reviews');
+              }}
+            />
           </div>
 
           {/* Sidebar - Réservation */}

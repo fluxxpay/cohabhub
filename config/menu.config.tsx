@@ -63,6 +63,7 @@ export const MENU_SIDEBAR: MenuConfig = [
   { title: 'Vue d\'ensemble', icon: House, path: '/dashboard' },
   { title: 'Mes réservations', icon: Calendar, path: '/dashboard?tab=reservations' },
   { title: 'Calendrier', icon: CalendarCheck, path: '/dashboard?tab=calendar' },
+  { title: 'Mes avis', icon: Star, path: '/dashboard?tab=reviews' },
   { heading: 'Compte' },
   { title: 'Profil', icon: UserCircle, path: '/dashboard?tab=profile' },
   { title: 'Paramètres', icon: Settings, path: '/dashboard?tab=settings' },

@@ -10,6 +10,7 @@ import Invoices from './components/invoices';
 import Profile from './components/profile';
 import Billing from './components/billing';
 import SettingsPage from './components/settings';
+import Reviews from './components/reviews';
 
 type DashboardTab =
   | 'overview'
@@ -19,7 +20,8 @@ type DashboardTab =
   | 'invoices'
   | 'profile'
   | 'billing'
-  | 'settings';
+  | 'settings'
+  | 'reviews';
 
 const validTabs: DashboardTab[] = [
   'overview',
@@ -30,6 +32,7 @@ const validTabs: DashboardTab[] = [
   'profile',
   'billing',
   'settings',
+  'reviews',
 ];
 
 function DashboardContent() {
@@ -65,6 +68,8 @@ function DashboardContent() {
         return <Billing />;
       case 'settings':
         return <SettingsPage />;
+      case 'reviews':
+        return <Reviews />;
       default:
         return <DashboardOverview />;
     }
@@ -84,4 +89,3 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
-
