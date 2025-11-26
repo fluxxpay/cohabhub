@@ -112,7 +112,6 @@ export function StarRating({
                     : 'fill-gray-200 text-gray-300 dark:fill-gray-700 dark:text-gray-600',
                   !readOnly && 'hover:fill-yellow-300 hover:text-yellow-300'
                 )}
-                weight={isFilled ? 'fill' : 'regular'}
               />
             </button>
           );
