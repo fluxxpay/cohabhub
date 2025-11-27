@@ -120,8 +120,10 @@ export async function apiFetch<T = any>(
 
   // Ajouter le token d'authentification si disponible
   const authHeaders = getAuthHeaders();
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+  const defaultHeaders = isFormData ? {} : { 'Content-Type': 'application/json' };
   const headers = {
-    'Content-Type': 'application/json',
+    ...defaultHeaders,
     ...authHeaders,
     ...(options.headers || {}),
   };

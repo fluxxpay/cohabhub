@@ -8,6 +8,7 @@ interface User {
   email: string;
   name: string;
   role: 'user' | 'admin' | 'manager';
+  is_superuser?: boolean;
   avatar?: string;
   phone?: string;
   first_name?: string;
@@ -246,6 +247,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: userEmail || email,
           name: userName,
           role: normalizedRole as 'user' | 'admin' | 'manager',
+          is_superuser: userProfile?.is_superuser || false,
           avatar: userName[0]?.toUpperCase() || 'U',
           phone: userProfile?.phone || '',
           first_name: firstName,

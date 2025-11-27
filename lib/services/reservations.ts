@@ -314,12 +314,35 @@ export class ReservationService {
    */
   static async createReservation(payload: ReservationCreatePayload): Promise<Reservation> {
     try {
-      // Validation côté client
-      if (payload.date && new Date(payload.date) < new Date()) {
-        throw new ReservationError(
-          'Impossible de réserver une date passée',
-          'VALIDATION_ERROR'
-        );
+      // Validation côté client - comparer seulement les dates (sans l'heure)
+      if (payload.date) {
+        const selectedDate = new Date(payload.date);
+        const today = new Date();
+        // Réinitialiser les heures à minuit pour comparer seulement les dates
+        selectedDate.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+        
+        if (selectedDate < today) {
+          throw new ReservationError(
+            'Impossible de réserver une date passée',
+            'VALIDATION_ERROR'
+          );
+        }
+        
+        // Si c'est aujourd'hui et qu'on a des heures, vérifier que l'heure de fin n'est pas passée
+        if (selectedDate.getTime() === today.getTime() && payload.start_time && payload.end_time) {
+          const now = new Date();
+          const [endHours, endMinutes] = payload.end_time.split(':').map(Number);
+          const endTime = new Date(now);
+          endTime.setHours(endHours, endMinutes, 0, 0);
+          
+          if (endTime <= now) {
+            throw new ReservationError(
+              'L\'heure de fin de réservation ne peut pas être dans le passé',
+              'VALIDATION_ERROR'
+            );
+          }
+        }
       }
 
       if (payload.start_time && payload.end_time) {

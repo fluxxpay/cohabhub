@@ -11,6 +11,7 @@ import Profile from './components/profile';
 import Billing from './components/billing';
 import SettingsPage from './components/settings';
 import Reviews from './components/reviews';
+import ExpensesAdmin from './components/expenses-admin';
 
 type DashboardTab =
   | 'overview'
@@ -21,7 +22,8 @@ type DashboardTab =
   | 'profile'
   | 'billing'
   | 'settings'
-  | 'reviews';
+  | 'reviews'
+  | 'expenses';
 
 const validTabs: DashboardTab[] = [
   'overview',
@@ -33,6 +35,7 @@ const validTabs: DashboardTab[] = [
   'billing',
   'settings',
   'reviews',
+  'expenses',
 ];
 
 function DashboardContent() {
@@ -70,6 +73,8 @@ function DashboardContent() {
         return <SettingsPage />;
       case 'reviews':
         return <Reviews />;
+      case 'expenses':
+        return <ExpensesAdmin />;
       default:
         return <DashboardOverview />;
     }

@@ -22,8 +22,21 @@ import Notifications from '@/components/admin/Notifications';
 import ReferralManagement from '@/components/admin/ReferralManagement';
 import CheckInManagement from '@/components/admin/CheckInManagement';
 import OptionsManagement from '@/components/admin/OptionsManagement';
+import FinancialManagement from '@/components/admin/FinancialManagement';
 
-type AdminTab = 'overview' | 'users' | 'spaces' | 'reservations' | 'checkin' | 'billing' | 'analytics' | 'settings' | 'notifications' | 'referrals' | 'options';
+type AdminTab =
+  | 'overview'
+  | 'users'
+  | 'spaces'
+  | 'reservations'
+  | 'checkin'
+  | 'billing'
+  | 'analytics'
+  | 'settings'
+  | 'notifications'
+  | 'referrals'
+  | 'options'
+  | 'financial';
 
 export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
@@ -64,6 +77,7 @@ export default function AdminDashboardPage() {
     { id: 'billing' as AdminTab, name: 'Facturation', icon: CreditCard, description: 'Gérer la facturation' },
     { id: 'referrals' as AdminTab, name: 'Parrainage', icon: Gift, description: 'Gérer les parrainages' },
     { id: 'analytics' as AdminTab, name: 'Analytics', icon: ChartLine, description: 'Statistiques et rapports' },
+    { id: 'financial' as AdminTab, name: 'Finances', icon: CreditCard, description: 'Allocations & budgets' },
     { id: 'notifications' as AdminTab, name: 'Notifications', icon: Bell, description: 'Gérer les notifications' },
     { id: 'settings' as AdminTab, name: 'Paramètres', icon: Gear, description: 'Configuration système' }
   ];
@@ -88,6 +102,8 @@ export default function AdminDashboardPage() {
         return <ReferralManagement />;
       case 'analytics': 
         return <Analytics />;
+      case 'financial':
+        return <FinancialManagement />;
       case 'notifications': 
         return <Notifications />;
       case 'settings': 
