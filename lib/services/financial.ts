@@ -1,5 +1,11 @@
 import { apiFetch } from '../api';
 
+export interface ApiError {
+  detail?: string;
+  non_field_errors?: string | string[];
+  message?: string;
+}
+
 export interface FinancialCategory {
   id: number;
   slug: string;

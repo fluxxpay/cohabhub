@@ -121,12 +121,28 @@ export async function apiFetch<T = any>(
   // Ajouter le token d'authentification si disponible
   const authHeaders = getAuthHeaders();
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
-  const defaultHeaders = isFormData ? {} : { 'Content-Type': 'application/json' };
-  const headers = {
-    ...defaultHeaders,
-    ...authHeaders,
-    ...(options.headers || {}),
-  };
+  
+  // Construire les headers en filtrant les valeurs undefined
+  const headers: Record<string, string> = {};
+  
+  // Ajouter Content-Type seulement si ce n'est pas FormData
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
+  
+  // Ajouter les headers d'authentification
+  Object.assign(headers, authHeaders);
+  
+  // Ajouter les headers personnalisés (en filtrant undefined)
+  if (options.headers) {
+    const customHeaders = options.headers as Record<string, string | undefined>;
+    Object.keys(customHeaders).forEach(key => {
+      const value = customHeaders[key];
+      if (value !== undefined) {
+        headers[key] = value;
+      }
+    });
+  }
 
   try {
     let response = await fetch(url, {
@@ -146,12 +162,26 @@ export async function apiFetch<T = any>(
 
       if (newToken) {
         // Réessayer la requête avec le nouveau token
-        const newHeaders = {
-          'Content-Type': 'application/json',
-          ...authHeaders,
-          Authorization: `Bearer ${newToken}`,
-          ...(options.headers || {}),
-        };
+        const newHeaders: Record<string, string> = {};
+        
+        // Ajouter Content-Type seulement si ce n'est pas FormData
+        if (!isFormData) {
+          newHeaders['Content-Type'] = 'application/json';
+        }
+        
+        // Ajouter Authorization avec le nouveau token
+        newHeaders['Authorization'] = `Bearer ${newToken}`;
+        
+        // Ajouter les headers personnalisés (en filtrant undefined)
+        if (options.headers) {
+          const customHeaders = options.headers as Record<string, string | undefined>;
+          Object.keys(customHeaders).forEach(key => {
+            const value = customHeaders[key];
+            if (value !== undefined && key !== 'Authorization') {
+              newHeaders[key] = value;
+            }
+          });
+        }
 
         response = await fetch(url, {
           ...options,

@@ -393,7 +393,7 @@ export default function FinancialManagement() {
               </div>
               <div className="flex gap-2">
                 {category.is_active ? (
-                  <Badge variant="default">Active</Badge>
+                  <Badge variant="success">Active</Badge>
                 ) : (
                   <Badge variant="secondary">Inactive</Badge>
                 )}
