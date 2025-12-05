@@ -270,8 +270,7 @@ export default function Referral() {
                   <CardTitle className="text-lg text-primary-foreground">Votre code unique</CardTitle>
                 </div>
                 <CardDescription className="text-primary-foreground/80">
-                  Partagez ce code avec vos amis et gagnez jusqu'à{' '}
-                  <strong className="text-primary-foreground">19 700 XOF</strong> pour chaque inscription valide.
+                  Gagnez entre <strong className="text-primary-foreground">3 et 8%</strong> sur les 5 premières réservations
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
