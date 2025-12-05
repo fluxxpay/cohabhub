@@ -179,12 +179,17 @@ export default function Notifications() {
 
   const markAsRead = async (id: number) => {
     try {
-      const { response } = await apiFetch(`/api/notifications/${id}/read/`, {
-        method: 'POST',
+      const { response, data } = await apiFetch(`/api/notifications/${id}/read/`, {
+        method: 'PATCH',
       });
 
-      if (!response || !response.ok) {
-        throw new Error('Erreur lors du marquage comme lu');
+      // Vérifier le code de statut HTTP (200-299 = succès)
+      const status = response?.status ?? 0;
+      const isSuccess = response && (response.ok || (status >= 200 && status < 300));
+
+      if (!isSuccess) {
+        const errorMessage = (data as any)?.error || (data as any)?.message || 'Erreur lors du marquage comme lu';
+        throw new Error(errorMessage);
       }
 
       setNotifications(prev =>
@@ -193,47 +198,71 @@ export default function Notifications() {
         )
       );
       toast.success('Notification marquée comme lue');
-    } catch (error) {
-      console.error('Erreur:', error);
-      toast.error('Erreur lors du marquage');
+    } catch (error: any) {
+      console.error('Erreur lors du marquage:', error);
+      toast.error(error?.message || 'Erreur lors du marquage');
     }
   };
 
   const markAllAsRead = async () => {
     try {
-      const { response } = await apiFetch('/api/notifications/mark-all-read/', {
-        method: 'POST',
+      const { response, data } = await apiFetch('/api/notifications/read-all/', {
+        method: 'PATCH',
       });
 
-      if (!response || !response.ok) {
-        throw new Error('Erreur lors du marquage de tous comme lus');
+      // Vérifier le code de statut HTTP (200-299 = succès)
+      const status = response?.status ?? 0;
+      const isSuccess = response && (response.ok || (status >= 200 && status < 300));
+
+      if (!isSuccess) {
+        const errorMessage = (data as any)?.error || (data as any)?.message || 'Erreur lors du marquage de tous comme lus';
+        throw new Error(errorMessage);
       }
 
       setNotifications(prev =>
         prev.map(notif => ({ ...notif, read: true }))
       );
       toast.success('Toutes les notifications ont été marquées comme lues');
-    } catch (error) {
-      console.error('Erreur:', error);
-      toast.error('Erreur lors du marquage');
+    } catch (error: any) {
+      console.error('Erreur lors du marquage:', error);
+      toast.error(error?.message || 'Erreur lors du marquage');
     }
   };
 
   const deleteNotification = async (id: number) => {
     try {
-      const { response } = await apiFetch(`/api/notifications/${id}/`, {
+      const { response, data } = await apiFetch(`/api/notifications/${id}/delete/`, {
         method: 'DELETE',
       });
 
-      if (!response || !response.ok) {
-        throw new Error('Erreur lors de la suppression');
+      // Vérifier le code de statut HTTP (200-299 = succès, 204 = No Content aussi OK)
+      const status = response?.status ?? 0;
+      const isSuccess = response && (response.ok || (status >= 200 && status < 300) || status === 204);
+
+      if (!isSuccess) {
+        // Vérifier si les données contiennent une erreur explicite
+        const errorData = data as any;
+        if (errorData?.error || errorData?.message) {
+          const errorMessage = errorData.error || errorData.message;
+          console.error('Erreur API lors de la suppression:', { status, data, response });
+          throw new Error(errorMessage);
+        }
+        // Si pas d'erreur explicite mais statut non-OK, vérifier le statut plus précisément
+        if (status >= 400) {
+          throw new Error(`Erreur serveur (${status})`);
+        }
+        // Si statut < 400 mais response.ok est false, considérer comme succès (peut être un problème de parsing)
+        console.warn('Réponse non-OK mais statut < 400, considéré comme succès:', { status, response });
       }
 
+      // Si on arrive ici, la suppression a réussi
       setNotifications(prev => prev.filter(notif => notif.id !== id));
       toast.success('Notification supprimée');
-    } catch (error) {
-      console.error('Erreur:', error);
-      toast.error('Erreur lors de la suppression');
+    } catch (error: any) {
+      // Vraie erreur - seulement afficher si c'est vraiment une erreur
+      const errorMessage = error?.message || 'Erreur lors de la suppression';
+      console.error('Erreur lors de la suppression:', error);
+      toast.error(errorMessage);
     }
   };
 

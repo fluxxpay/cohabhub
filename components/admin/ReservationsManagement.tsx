@@ -64,6 +64,13 @@ interface Reservation {
   space_id?: number;
   space_category?: string;
   options?: Array<{ id: number; name: string }>;
+  user?: {
+    name: string;
+    email?: string;
+    phone?: string;
+    avatar?: string;
+    role?: string;
+  };
   reservants?: Array<{
     name: string;
     email?: string;
@@ -526,7 +533,9 @@ export default function ReservationsManagement() {
       >
         {displayedReservations.length > 0 ? (
           displayedReservations.map((reservation, index) => {
-            const reservantName = (reservation.reservants && reservation.reservants[0]?.name) || 'Utilisateur';
+            const reservantName = reservation.user?.name || 
+                                  (reservation.reservants && reservation.reservants[0]?.name) || 
+                                  'Utilisateur';
             const reservantInitials = getReservantInitials(reservantName);
 
             return (
@@ -550,7 +559,12 @@ export default function ReservationsManagement() {
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-3">
                         <div>
-                          <h3 className="text-lg font-medium text-primary-900">{reservantName}</h3>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-lg font-medium text-primary-900">{reservantName}</h3>
+                            <span className="text-xs text-primary-500 bg-primary-50 px-2 py-0.5 rounded-md font-mono">
+                              ID: {reservation.id}
+                            </span>
+                          </div>
                           <p className="text-sm text-primary-600">{reservation.space?.name}</p>
                         </div>
                         <div className="flex items-center flex-wrap gap-2">
@@ -980,7 +994,9 @@ export default function ReservationsManagement() {
                 <span className="font-medium text-primary-900">{selectedReservationData.event_name || "sans nom"}</span>{" "}
                 effectuée par{" "}
                 <span className="font-medium text-primary-900">
-                  {selectedReservationData.reservants && selectedReservationData.reservants[0]?.name || 'N/A'}
+                  {selectedReservationData.user?.name || 
+                   (selectedReservationData.reservants && selectedReservationData.reservants[0]?.name) || 
+                   'N/A'}
                 </span>{" "}
                 prévu pour la date du {" "}
                 <span className="font-medium text-primary-900">
@@ -1026,7 +1042,12 @@ export default function ReservationsManagement() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-light text-primary-900">Détails de la réservation</h2>
+              <div>
+                <h2 className="text-2xl font-light text-primary-900">Détails de la réservation</h2>
+                <span className="text-xs text-primary-500 bg-primary-50 px-2 py-1 rounded-md font-mono mt-1 inline-block">
+                  ID: {selectedReservationData.id}
+                </span>
+              </div>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

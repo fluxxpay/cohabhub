@@ -17,7 +17,59 @@ import type {
 } from '@/types/checkin';
 
 
+export interface ReservationSearchResult {
+  id: number;
+  event_name: string;
+  date: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  space_name: string | null;
+  user: {
+    id: number;
+    email: string;
+    first_name: string;
+    last_name: string;
+    full_name: string;
+  };
+  can_check_in: boolean;
+  verification_message: string;
+  has_active_session: boolean;
+}
+
+export interface ReservationSearchResponse {
+  results: ReservationSearchResult[];
+  count: number;
+  error?: string;
+}
+
 export class CheckInService {
+  /**
+   * Recherche intelligente de réservations pour check-in
+   */
+  static async searchReservations(query: string, limit: number = 10): Promise<ReservationSearchResponse> {
+    try {
+      const params = new URLSearchParams();
+      params.append('q', query);
+      params.append('limit', String(limit));
+
+      const endpoint = `/api/admin/reservations/search-checkin/?${params.toString()}`;
+
+      const result = await apiFetch<ReservationSearchResponse>(endpoint, {
+        method: 'GET',
+      });
+
+      if (!result.response?.ok) {
+        const error: ApiError = result.data as ApiError;
+        throw new Error(error.error || error.detail || error.message || 'Erreur lors de la recherche');
+      }
+
+      return result.data as ReservationSearchResponse;
+    } catch (error: any) {
+      console.error('Erreur lors de la recherche de réservations:', error);
+      throw new Error(error.message || 'Erreur lors de la recherche de réservations');
+    }
+  }
+
   /**
    * Vérifie une réservation avant check-in
    */

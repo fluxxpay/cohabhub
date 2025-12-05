@@ -28,6 +28,7 @@ export interface ReservationSession {
   user_email: string;
   space_name: string;
   space_id: number;
+  space_price_hour?: number;
   event_name: string;
   is_active: boolean;
   is_overtime: boolean;
