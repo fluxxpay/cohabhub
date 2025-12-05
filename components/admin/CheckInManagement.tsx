@@ -23,7 +23,7 @@ import {
 } from '@phosphor-icons/react';
 import { CheckInService, type ReservationSearchResult } from '@/lib/services/checkin';
 import { apiFetch } from '@/lib/api';
-import { convertAndFormatEurToXof } from '@/utils/currency';
+import { formatXof } from '@/utils/currency';
 import type {
   ReservationVerification,
   ReservationSession,
@@ -1193,7 +1193,7 @@ export default function CheckInManagement() {
                               <p className="text-sm font-semibold text-primary-600">
                                 {(() => {
                                   const cost = safeToNumber(session.total_cost);
-                                  return cost !== null ? convertAndFormatEurToXof(cost) : '-';
+                                  return cost !== null ? formatXof(cost) : '-';
                                 })()}
                               </p>
                             </div>
@@ -1207,7 +1207,7 @@ export default function CheckInManagement() {
                                 <Warning className="h-4 w-4 text-yellow-600" />
                                 <span className="text-sm text-yellow-700 font-medium">
                                   {overtimeHours.toFixed(1)}h supplémentaires
-                                  {overtimeCost !== null ? ` (+${convertAndFormatEurToXof(overtimeCost)})` : ''}
+                                  {overtimeCost !== null ? ` (+${formatXof(overtimeCost)})` : ''}
                                 </span>
                               </div>
                             ) : null;
@@ -1422,7 +1422,7 @@ export default function CheckInManagement() {
                       return baseCost !== null && baseCost > 0 ? (
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-600">Coût de base (payé à la réservation)</span>
-                          <span className="font-semibold">{convertAndFormatEurToXof(baseCost)}</span>
+                          <span className="font-semibold">{formatXof(baseCost)}</span>
                         </div>
                       ) : null;
                     })()}
@@ -1435,7 +1435,7 @@ export default function CheckInManagement() {
                         return (
                           <div className="flex justify-between text-yellow-700">
                             <span className="text-sm font-medium">Heures supplémentaires</span>
-                            <span className="font-semibold">+{convertAndFormatEurToXof(overtimeCost)}</span>
+                            <span className="font-semibold">+{formatXof(overtimeCost)}</span>
                           </div>
                         );
                       } else if (reserved !== null && actual !== null && actual < reserved) {
@@ -1455,7 +1455,7 @@ export default function CheckInManagement() {
                       <span className="text-lg font-bold text-green-700">
                         {(() => {
                           const totalCost = safeToNumber(selectedHistorySession.total_cost);
-                          return totalCost !== null ? convertAndFormatEurToXof(totalCost) : '-';
+                          return totalCost !== null ? formatXof(totalCost) : '-';
                         })()}
                       </span>
                     </div>
@@ -1606,7 +1606,7 @@ export default function CheckInManagement() {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">Coût de base (déjà payé):</span>
                       <span className="font-semibold text-gray-900">
-                        {convertAndFormatEurToXof(estimatedCost.baseCost)}
+                        {formatXof(estimatedCost.baseCost)}
                       </span>
                     </div>
                     {estimatedCost.overtimeHours > 0 && (
@@ -1616,12 +1616,12 @@ export default function CheckInManagement() {
                             <span className="text-sm font-medium">Heures supplémentaires:</span>
                             {estimatedCost.hourlyRate > 0 && (
                               <span className="text-xs text-gray-500 mt-0.5">
-                                {estimatedCost.overtimeHours.toFixed(2)}h × {convertAndFormatEurToXof(estimatedCost.hourlyRate)}/h
+                                {estimatedCost.overtimeHours.toFixed(2)}h × {formatXof(estimatedCost.hourlyRate)}/h
                               </span>
                             )}
                           </div>
                           <span className="font-semibold">
-                            +{convertAndFormatEurToXof(estimatedCost.overtimeCost)}
+                            +{formatXof(estimatedCost.overtimeCost)}
                           </span>
                         </div>
                         <div className="bg-yellow-50 border border-yellow-200 rounded p-2">
@@ -1634,7 +1634,7 @@ export default function CheckInManagement() {
                     <div className="flex justify-between items-center pt-3 border-t-2 border-green-300">
                       <span className="text-base font-bold text-gray-900">Coût total estimé:</span>
                       <span className="text-2xl font-bold text-green-700">
-                        {convertAndFormatEurToXof(estimatedCost.totalCost)}
+                        {formatXof(estimatedCost.totalCost)}
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 mt-2">
