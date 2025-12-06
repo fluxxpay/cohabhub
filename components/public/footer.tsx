@@ -85,7 +85,10 @@ export const PublicFooter = () => {
                 </div>
                 <div className="flex items-center space-x-3 text-primary-300">
                   <Phone className="h-5 w-5 text-accent-400" weight="duotone" />
-                  <span className="font-body">+229 62 00 00 00</span>
+                  <div className="flex flex-col space-y-1">
+                    <a href="tel:0192999000" className="font-body hover:text-accent-400 transition-colors">01 92 99 90 00</a>
+                    <a href="tel:0121329471" className="font-body hover:text-accent-400 transition-colors">01 21 32 94 71</a>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-3 text-primary-300">
                   <Envelope className="h-5 w-5 text-accent-400" weight="duotone" />

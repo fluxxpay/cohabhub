@@ -130,9 +130,14 @@ export const ContactSection = () => {
                 </div>
                 <div>
                   <h4 className="font-semibold text-primary-900 mb-1">Téléphone</h4>
-                  <a href="tel:+22962000000" className="text-primary-600 hover:text-accent-600 transition-colors font-body">
-                    +229 62 00 00 00
-                  </a>
+                  <div className="flex flex-col space-y-1">
+                    <a href="tel:0192999000" className="text-primary-600 hover:text-accent-600 transition-colors font-body">
+                      01 92 99 90 00
+                    </a>
+                    <a href="tel:0121329471" className="text-primary-600 hover:text-accent-600 transition-colors font-body">
+                      01 21 32 94 71
+                    </a>
+                  </div>
                 </div>
               </motion.div>
 
