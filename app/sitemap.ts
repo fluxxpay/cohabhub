@@ -92,7 +92,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       });
     }
   } catch (error) {
-    console.error('Erreur lors de la récupération des espaces pour le sitemap:', error);
+    // En mode build (Vercel), l'API peut ne pas être accessible - ignorer silencieusement
+    // L'erreur est normale pendant le build statique, le sitemap sera régénéré à la demande
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Erreur lors de la récupération des espaces pour le sitemap:', error);
+    }
     // Continuer sans les routes dynamiques en cas d'erreur
   }
 
